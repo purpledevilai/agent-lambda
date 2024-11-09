@@ -5,7 +5,7 @@ from src.lambda_function import lambda_handler
 
 body = {
     #"context_id": "91f668d6-4536-42ec-8bd0-9c446286404f",
-    "message": "Hey, my name is Keanu. How are you?",
+    "message": "Hey, my name is Cowboy. How are you?",
 }
 
 event = {

@@ -1,6 +1,7 @@
 import uuid
 import json
 from AWS.CognitoFunctions import get_user_from_cognito
+from AWS.APIGatewayFunctions import create_api_gateway_response
 from RequestHandlers.AgentMessageHandler import agent_message_handler
 
 
@@ -36,10 +37,12 @@ def lambda_handler(event, context):
         context_id = body["context_id"]
         agent_name = body["agent_name"]
 
-        return agent_message_handler(agent_name, message, context_id, user["sub"])
+        response = agent_message_handler(agent_name, message, context_id, user["sub"])
+
+        return create_api_gateway_response(200, response)
 
     # Return any errors   
     except Exception as e:
-        return {
+        return create_api_gateway_response(400, {
             'error': str(e)
-        }
+        })
