@@ -3,9 +3,16 @@ sys.path.append("./")
 import json
 from src.lambda_function import lambda_handler
 
+body = {
+    #"context_id": "91f668d6-4536-42ec-8bd0-9c446286404f",
+    "message": "Hey, my name is Keanu. How are you?",
+}
+
 event = {
-    "context_id": "fe980400-be4d-4781-bf56-326c602a6df3",
-    "message": "Lets do monday, at 10am",
+  "headers": {
+    "Authorization": "access_token",
+  },
+  "body": json.dumps(body),
 }
 
 # Make the call!!

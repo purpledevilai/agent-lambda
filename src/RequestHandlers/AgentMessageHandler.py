@@ -3,10 +3,10 @@ from LLM.CreateLLM import create_llm
 from Agent.Context import get_context, save_context
 from Agent.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
 
-def agent_message_handler(agent_name, message, context_id):
+def agent_message_handler(agent_name, message, context_id, user_id):
 
     # Get the context
-    context = get_context(context_id)
+    context = get_context(context_id, user_id)
 
     # Get the agent
     agent = Agent(
