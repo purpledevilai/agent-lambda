@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - staging
 
 jobs:
   deploy:
@@ -21,9 +20,7 @@ jobs:
         AWS_REGION: ${{ secrets.AWS_REGION }}
       run: |
         if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          FUNCTION_NAME="recommendation-engine-lambda-function-production"
-        elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
-          FUNCTION_NAME="recommendation-engine-lambda-function-staging"
+          FUNCTION_NAME="agent-lambda-function"
         fi
 
         cd src
