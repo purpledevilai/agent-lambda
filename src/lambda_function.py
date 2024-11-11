@@ -1,7 +1,9 @@
+import os
 import uuid
 import json
 from AWS.CognitoFunctions import get_user_from_cognito
 from AWS.APIGatewayFunctions import create_api_gateway_response
+from AWS.CloudWatchLogsFunctions import get_logger
 from RequestHandlers.AgentMessageHandler import agent_message_handler
 from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
 
@@ -9,6 +11,9 @@ from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
 def lambda_handler(event, context):
     try:
+
+        logger = get_logger(log_level=os.environ["LOG_LEVEL"])
+        logger.info("Received event: " + json.dumps(event, indent=2))
 
         request_method = event["httpMethod"]
         request_path = event["path"]
@@ -24,7 +29,7 @@ def lambda_handler(event, context):
 
 
         # CHAT HISTORY
-        if request_method == "GET" and request_path == "/chat_history":
+        if request_method == "GET" and request_path == "/chat-history":
             response = get_chat_history_handler(user["sub"])
 
         
@@ -61,6 +66,7 @@ def lambda_handler(event, context):
 
     # Return any errors   
     except Exception as e:
+        logger.error(str(e))
         return create_api_gateway_response(400, {
             'error': str(e)
         })
