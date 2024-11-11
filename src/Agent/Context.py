@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from AWS.DynamoDBFunctions import get_item, put_item
+from AWS.DynamoDBFunctions import get_item, put_item, get_all_items_by_index
 
 CONTEXTS_TABLE_NAME = os.environ["CONTEXTS_TABLE_NAME"]
 CONTEXTS_PRIMARY_KEY = os.environ["CONTEXTS_PRIMARY_KEY"]
@@ -21,4 +21,7 @@ def get_context(context_id: str, user_id: str) -> dict:
 
 def save_context(context: dict) -> None:
     put_item(CONTEXTS_TABLE_NAME, context)
+
+def get_contexts_by_user_id(user_id: str) -> list[dict]:
+    return get_all_items_by_index(CONTEXTS_TABLE_NAME, "user_id", user_id)
 

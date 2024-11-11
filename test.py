@@ -9,12 +9,26 @@ body = {
 }
 
 event = {
+  "resource": "/chat",
+  "path": "/chat",
+  "httpMethod": "POST",
   "headers": {
-    "Authorization": "access_token",
+    "Authorization": "access-token"
   },
-  "body": json.dumps(body),
+  "body": json.dumps(body)
 }
 
+get_chat_history_event = {
+  "resource": "/chat_history",
+  "path": "/chat_history",
+  "httpMethod": "GET",
+  "headers": {
+    "Authorization": "access-token"
+  }
+}
+
+
+
 # Make the call!!
-result = lambda_handler(event, None)
-print(json.dumps(result, indent=4))
+result = lambda_handler(get_chat_history_event, None)
+print(json.dumps(json.loads(result["body"]), indent=4))
