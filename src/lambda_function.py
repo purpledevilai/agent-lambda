@@ -10,10 +10,11 @@ from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
 def lambda_handler(event, context):
-    try:
 
-        logger = get_logger(log_level=os.environ["LOG_LEVEL"])
-        logger.info("Received event: " + json.dumps(event, indent=2))
+    logger = get_logger(log_level=os.environ["LOG_LEVEL"])
+    logger.info("Received event: " + json.dumps(event, indent=2))
+
+    try:
 
         request_method = event["httpMethod"]
         request_path = event["path"]
