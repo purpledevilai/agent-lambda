@@ -18,7 +18,7 @@ def lambda_handler(event, context):
 
         request_method = event["httpMethod"]
         request_path = event["path"]
-        request_params = event.get("queryStringParameters", {})
+        request_params = event.get("queryStringParameters") if event.get("queryStringParameters") is not None else {}
         response = None
 
         # Get authentication token
