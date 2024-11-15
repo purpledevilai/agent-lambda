@@ -1,11 +1,11 @@
 import os
-import uuid
 import json
 from AWS.CognitoFunctions import get_user_from_cognito
 from AWS.APIGatewayFunctions import create_api_gateway_response
 from AWS.CloudWatchLogsFunctions import get_logger
 from RequestHandlers.AgentMessageHandler import agent_message_handler
 from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
+from RequestHandlers.GetContextHandler import get_context_handler
 
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
@@ -18,6 +18,7 @@ def lambda_handler(event, context):
 
         request_method = event["httpMethod"]
         request_path = event["path"]
+        request_params = event["queryStringParameters"]
         response = None
 
         # Get authentication token
@@ -29,12 +30,17 @@ def lambda_handler(event, context):
         user = get_user_from_cognito(token)
 
 
-        # CHAT HISTORY
+        # POST: /chat-history
         if request_method == "GET" and request_path == "/chat-history":
             response = get_chat_history_handler(user["sub"])
 
+         # GET: /context
+        if request_method == "GET" and request_path == "/context":
+            context_id = request_params.get("context_id")
+            agent_id = request_params.get("agent_id")
+            response = get_context_handler(context_id, agent_id, user["sub"])
         
-        # CHAT
+        # GET: /chat
         if request_method == "POST" and request_path == "/chat":
             # Get the body of the request
             body = json.loads(event["body"])
@@ -44,19 +50,14 @@ def lambda_handler(event, context):
                 raise Exception("No message provided")
             
             # Create context_id if none provided
-            if "context_id" not in body or body["context_id"] == "":
-                body["context_id"] = str(uuid.uuid4())
-
-            # Check for agent name and set to default if not provided
-            if "agent_name" not in body or body["agent_name"] == "":
-                body["agent_name"] = "default"
+            if "context_id" not in body:
+                raise Exception("No context_id provided")
                 
             # Get the message and conversation ID
             message = body["message"]
             context_id = body["context_id"]
-            agent_name = body["agent_name"]
 
-            response = agent_message_handler(agent_name, message, context_id, user["sub"])
+            response = agent_message_handler(message, context_id, user["sub"])
 
 
         # NOT SUPPORTED

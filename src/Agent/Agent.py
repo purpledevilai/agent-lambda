@@ -1,45 +1,55 @@
-from typing import List, Tuple, Callable, Any
-from pydantic import BaseModel
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage
+import os
+from datetime import datetime
+import uuid
+from AWS.DynamoDBFunctions import get_item, put_item, get_all_items_by_index
 
-class Agent:
-  def __init__(
-      self,
-      llm: BaseChatModel,
-      prompt: str,
-      tools: List[Tuple[BaseModel, Callable[[Any], str]]] = None,
-      messages: List[BaseMessage] = []
-  ):
-    self.messages = messages
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", prompt),
-        (MessagesPlaceholder(variable_name="messages"))
-    ])
-    if tools:
-      tool_params_list = []
-      self.name_to_tool = {}
-      for tool_params, tool in tools:
-        tool_params_list.append(tool_params)
-        self.name_to_tool[tool_params.__name__] = tool
-      llm = llm.bind_tools(tool_params_list)
-    self.prompt_chain = prompt | llm
+AGENTS_TABLE_NAME = os.environ["AGENTS_TABLE_NAME"]
+AGENTS_PRIMARY_KEY = os.environ["AGENTS_PRIMARY_KEY"]
 
-  def invoke(self):
-    response = self.prompt_chain.invoke({"messages": self.messages})
-    self.messages.append(response)
-    if len(response.tool_calls) > 0:
-      for tool_call in response.tool_calls:
-        try:
-          tool_response = self.name_to_tool[tool_call["name"]](**tool_call['args'])
-          tool_message = ToolMessage(tool_call_id=tool_call['id'], content=tool_response)
-        except Exception as e:
-          tool_message = ToolMessage(tool_call_id=tool_call['id'], content=f"Issue calling tool: {tool_call['name']}, error: {e}")
-        self.messages.append(tool_message)
-      return self.invoke()
-    return response.content
+def agent_exists(agent_id: str) -> bool:
+    try: 
+        get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id)
+        return True
+    except:
+        return False
+    
+def create_agent(agent_name: str, prompt: str, user_id: str) -> dict:
+    agent = {
+        AGENTS_PRIMARY_KEY: str(uuid.uuid4()),
+        "agent_name": agent_name,
+        "prompt": prompt,
+        "user_id": user_id,
+        "is_default_agent": False,
+        "created_at": int(datetime.timestamp(datetime.now())),
+    }
+    put_item(AGENTS_TABLE_NAME, agent)
+    return agent
 
-  def add_human_message_and_invoke(self, message: str):
-    self.messages.append(HumanMessage(content=message))
-    return self.invoke()
+def get_agent(agent_id: str) -> dict:
+    try:
+        return get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id)
+    except:
+        raise Exception(f"Agent with id: {agent_id} does not exist")
+    
+def get_agent_for_user(agent_id: str, user_id: str) -> dict:
+    agent = get_agent(agent_id)
+    if (agent.get("user_id") != user_id and not agent["is_default_agent"]):
+        raise Exception(f"Agent does not belong to user")
+    return agent
+    
+def save_agent(agent: dict) -> dict:
+    put_item(AGENTS_TABLE_NAME, agent)
+
+def get_default_agents() -> list[dict]:
+    return get_all_items_by_index(AGENTS_TABLE_NAME, "is_default_agent", True)
+
+def get_agents_for_user(user_id: str):
+    default_agents = get_default_agents()
+    user_agents = get_all_items_by_index(AGENTS_TABLE_NAME, "user_id", user_id)
+    return {
+        "default_agents": default_agents,
+        "user_agents": user_agents
+    }
+
+
+
