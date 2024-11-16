@@ -6,6 +6,7 @@ from AWS.CloudWatchLogsFunctions import get_logger
 from RequestHandlers.AgentMessageHandler import agent_message_handler
 from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
 from RequestHandlers.GetContextHandler import get_context_handler
+from RequestHandlers.GetAgentsHandler import get_agents_handler
 
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
@@ -16,6 +17,7 @@ def lambda_handler(event, context):
 
     try:
 
+        # Get the request details
         request_method = event["httpMethod"]
         request_path = event["path"]
         request_params = event.get("queryStringParameters") if event.get("queryStringParameters") is not None else {}
@@ -26,7 +28,7 @@ def lambda_handler(event, context):
             raise Exception("No authentication token provided")
         token = event["headers"]["Authorization"]
 
-        # Get user from cognito
+        # Get user from cognito, will fail if not authenticated
         user = get_user_from_cognito(token)
 
 
@@ -39,6 +41,10 @@ def lambda_handler(event, context):
             context_id = request_params.get("context_id")
             agent_id = request_params.get("agent_id")
             response = get_context_handler(context_id, agent_id, user["sub"])
+
+        # GET: /agents
+        if request_method == "GET" and request_path == "/agents":
+            response = get_agents_handler(user["sub"])
         
         # GET: /chat
         if request_method == "POST" and request_path == "/chat":
