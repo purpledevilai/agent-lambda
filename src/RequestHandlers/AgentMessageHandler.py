@@ -1,7 +1,7 @@
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm
-from Agent.Context import get_context_for_user, save_context
-from Agent.Agent import get_agent_for_user
+from Models.Context import get_context_for_user, save_context
+from Models.Agent import get_agent_for_user
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
 
 def agent_message_handler(message, context_id, user_id):

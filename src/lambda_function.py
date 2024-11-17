@@ -36,7 +36,7 @@ def lambda_handler(event, context):
         if request_method == "GET" and request_path == "/chat-history":
             response = get_chat_history_handler(user["sub"])
 
-         # GET: /context
+        # GET: /context
         if request_method == "GET" and request_path == "/context":
             context_id = request_params.get("context_id")
             agent_id = request_params.get("agent_id")

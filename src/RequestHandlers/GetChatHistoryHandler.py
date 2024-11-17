@@ -1,5 +1,5 @@
-from Agent.Context import get_contexts_by_user_id
-from Agent.Agent import get_agents_for_user
+from Models.Context import get_contexts_by_user_id
+from Models.Agent import get_agents_for_user
 
 def get_chat_history_handler(user_id):
     chat_history = get_contexts_by_user_id(user_id)
