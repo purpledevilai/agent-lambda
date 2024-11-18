@@ -3,10 +3,12 @@ import json
 from AWS.CognitoFunctions import get_user_from_cognito
 from AWS.APIGatewayFunctions import create_api_gateway_response
 from AWS.CloudWatchLogsFunctions import get_logger
-from RequestHandlers.AgentMessageHandler import agent_message_handler
+from RequestHandlers.ChatHandler import chat_handler
 from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
 from RequestHandlers.GetContextHandler import get_context_handler
 from RequestHandlers.GetAgentsHandler import get_agents_handler
+from RequestHandlers.CreateOrganizationHandler import create_organization_handler
+from RequestHandlers.CreateUserHandler import create_user_handler
 
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
@@ -31,12 +33,27 @@ def lambda_handler(event, context):
         # Get user from cognito, will fail if not authenticated
         user = get_user_from_cognito(token)
 
+        # POST /user - Create a new user
+        if request_method == "POST" and request_path == "/user":
+            response = create_user_handler(user["sub"])
 
-        # POST: /chat-history
+        # POST: /orgainization - Create a new organization
+        if request_method == "POST" and request_path == "/organization":
+            # Get the body of the request
+            body = json.loads(event["body"])
+
+            # Check for required params
+            if "name" not in body:
+                raise Exception("No name provided")
+            
+            # Create the organization
+            response = create_organization_handler(body["name"], user["sub"])
+
+        # GET: /chat-history
         if request_method == "GET" and request_path == "/chat-history":
             response = get_chat_history_handler(user["sub"])
 
-         # GET: /context
+        # GET: /context
         if request_method == "GET" and request_path == "/context":
             context_id = request_params.get("context_id")
             agent_id = request_params.get("agent_id")
@@ -46,7 +63,7 @@ def lambda_handler(event, context):
         if request_method == "GET" and request_path == "/agents":
             response = get_agents_handler(user["sub"])
         
-        # GET: /chat
+        # CHAT: /chat
         if request_method == "POST" and request_path == "/chat":
             # Get the body of the request
             body = json.loads(event["body"])
@@ -63,7 +80,7 @@ def lambda_handler(event, context):
             message = body["message"]
             context_id = body["context_id"]
 
-            response = agent_message_handler(message, context_id, user["sub"])
+            response = chat_handler(message, context_id, user["sub"])
 
 
         # NOT SUPPORTED

@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 import uuid
 from AWS.DynamoDBFunctions import get_item, put_item, get_all_items_by_index
-from Agent.Agent import get_agent_for_user
+from Models.Agent import get_agent_for_user
 
 CONTEXTS_TABLE_NAME = os.environ["CONTEXTS_TABLE_NAME"]
 CONTEXTS_PRIMARY_KEY = os.environ["CONTEXTS_PRIMARY_KEY"]
