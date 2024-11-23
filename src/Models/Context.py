@@ -19,7 +19,7 @@ def create_context(agent_id: str, user_id: str):
     context = {
         CONTEXTS_PRIMARY_KEY: str(uuid.uuid4()),
         "agent_id": agent_id,
-        "user_id": user_id,
+        "user_id": user_id if user_id is not None else "public",
         "time_stamp": int(datetime.timestamp(datetime.now())),
         "messages": []
     }
@@ -35,9 +35,11 @@ def get_context(context_id: str) -> dict:
     
 def get_context_for_user(context_id: str, user_id: str) -> dict:
     context = get_context(context_id)
-    if (context["user_id"] != user_id):
-        raise Exception(f"Context does not belong to user")
-    return context
+    if (context.get("user_id") == "public"):
+        return context
+    if (context.get("user_id") == user_id):
+        return context
+    raise Exception(f"Context does not belong to user")
 
 def save_context(context: dict) -> None:
     put_item(CONTEXTS_TABLE_NAME, context)

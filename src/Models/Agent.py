@@ -37,9 +37,14 @@ def get_agent(agent_id: str) -> dict:
 
 def get_agent_for_user(agent_id: str, user_id: str) -> dict:
     agent = get_agent(agent_id)
-    if (agent.get("user_id") != user_id and not agent["is_default_agent"]):
-        raise Exception(f"Agent does not belong to user")
-    return agent
+    if (agent.get("is_public")):
+        return agent
+    if (agent.get("user_id") == user_id):
+        return agent
+    if (agent.get("is_default_agent") and user_id != None):
+        return agent
+    raise Exception(f"Agent does not belong to user")
+
 
 
 def save_agent(agent: dict) -> dict:

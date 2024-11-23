@@ -10,6 +10,8 @@ from RequestHandlers.GetAgentsHandler import get_agents_handler
 from RequestHandlers.CreateOrganizationHandler import create_organization_handler
 from RequestHandlers.CreateUserHandler import create_user_handler
 
+public_endpoints = [("GET", "/context"), ("POST", "/chat")]
+
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
 def lambda_handler(event, context):
@@ -25,17 +27,23 @@ def lambda_handler(event, context):
         request_params = event.get("queryStringParameters") if event.get("queryStringParameters") is not None else {}
         response = None
 
-        # Get authentication token
-        if "headers" not in event or "Authorization" not in event["headers"]:
-            raise Exception("No authentication token provided")
-        token = event["headers"]["Authorization"]
-
-        # Get user from cognito, will fail if not authenticated
-        user = get_user_from_cognito(token)
-
+        # Get the user from the token
+        user_id = None
+        try:
+            # Get authentication token
+            if "headers" not in event or "Authorization" not in event["headers"]:
+                raise Exception("No authentication token provided")
+            token = event["headers"]["Authorization"]
+            user = get_user_from_cognito(token)
+            user_id = user["sub"]
+        except Exception as e:
+            if (request_method, request_path) not in public_endpoints:
+                raise Exception("Not authenticated")
+            
+            
         # POST /user - Create a new user
         if request_method == "POST" and request_path == "/user":
-            response = create_user_handler(user["sub"])
+            response = create_user_handler(user_id)
 
         # POST: /orgainization - Create a new organization
         if request_method == "POST" and request_path == "/organization":
@@ -47,21 +55,21 @@ def lambda_handler(event, context):
                 raise Exception("No name provided")
             
             # Create the organization
-            response = create_organization_handler(body["name"], user["sub"])
+            response = create_organization_handler(body["name"], user_id)
 
         # GET: /chat-history
         if request_method == "GET" and request_path == "/chat-history":
-            response = get_chat_history_handler(user["sub"])
+            response = get_chat_history_handler(user_id)
 
         # GET: /context
         if request_method == "GET" and request_path == "/context":
             context_id = request_params.get("context_id")
             agent_id = request_params.get("agent_id")
-            response = get_context_handler(context_id, agent_id, user["sub"])
+            response = get_context_handler(context_id, agent_id, user_id)
 
         # GET: /agents
         if request_method == "GET" and request_path == "/agents":
-            response = get_agents_handler(user["sub"])
+            response = get_agents_handler(user_id)
         
         # CHAT: /chat
         if request_method == "POST" and request_path == "/chat":
@@ -80,7 +88,7 @@ def lambda_handler(event, context):
             message = body["message"]
             context_id = body["context_id"]
 
-            response = chat_handler(message, context_id, user["sub"])
+            response = chat_handler(message, context_id, user_id)
 
 
         # NOT SUPPORTED
