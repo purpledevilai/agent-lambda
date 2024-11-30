@@ -37,6 +37,7 @@ def lambda_handler(event, context):
             user = get_user_from_cognito(token)
             user_id = user["sub"]
         except Exception as e:
+            # Public endpoints
             if (request_method, request_path) not in public_endpoints:
                 raise Exception("Not authenticated")
             
@@ -69,7 +70,8 @@ def lambda_handler(event, context):
 
         # GET: /agents
         if request_method == "GET" and request_path == "/agents":
-            response = get_agents_handler(user_id)
+            org_id = request_params.get("org_id")
+            response = get_agents_handler(user_id, org_id)
         
         # CHAT: /chat
         if request_method == "POST" and request_path == "/chat":

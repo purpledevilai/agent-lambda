@@ -45,6 +45,8 @@ def get_agent_for_user(agent_id: str, user_id: str) -> dict:
         return agent
     raise Exception(f"Agent does not belong to user")
 
+def get_agents_in_org(org_id: str):
+    return get_all_items_by_index(AGENTS_TABLE_NAME, "org_id", org_id)
 
 
 def save_agent(agent: dict) -> dict:
