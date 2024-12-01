@@ -16,7 +16,7 @@ def chat_handler(message, context_id, user_id):
     tools = []
     if (agent.get("tools")):
         for tool in agent["tools"]:
-            if (tool["type"] == "set-prompt"):
+            if (tool == "set-prompt"):
                 tools.append(set_prompt_tool)
 
 
