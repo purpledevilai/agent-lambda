@@ -48,6 +48,12 @@ def get_agent_for_user(agent_id: str, user_id: str) -> dict:
 def get_agents_in_org(org_id: str):
     return get_all_items_by_index(AGENTS_TABLE_NAME, "org_id", org_id)
 
+def get_public_agent(agent_id: str) -> dict:
+    agent = get_agent(agent_id)
+    if (agent.get("is_public")):
+        return agent
+    raise Exception(f"Agent is not public")
+
 
 def save_agent(agent: dict) -> dict:
     put_item(AGENTS_TABLE_NAME, agent)
@@ -61,3 +67,13 @@ def get_agents_for_user(user_id: str):
     default_agents = get_default_agents()
     user_agents = get_all_items_by_index(AGENTS_TABLE_NAME, "user_id", user_id)
     return default_agents + user_agents
+
+def get_agent_for_orgs(agent_id: str, org_ids: list[str]):
+    agent = get_agent(agent_id)
+    if (agent.get("is_public")):
+        return agent
+    if (agent.get("org_id") == "default"):
+        return agent
+    if (agent.get("org_id") in org_ids):
+        return agent
+    raise Exception(f"Agent does not belong to users orgs")

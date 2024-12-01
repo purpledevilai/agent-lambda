@@ -64,9 +64,13 @@ def lambda_handler(event, context):
 
         # GET: /context
         if request_method == "GET" and request_path == "/context":
-            context_id = request_params.get("context_id")
-            agent_id = request_params.get("agent_id")
-            response = get_context_handler(context_id, agent_id, user_id)
+            params = {
+                "context_id": request_params.get("context_id"),
+                "agent_id": request_params.get("agent_id"),
+                "invoke_agent_message": request_params.get("invoke_agent_message", "False").lower() == "true",
+                "user_id": user_id
+            }
+            response = get_context_handler(**params)
 
         # GET: /agents
         if request_method == "GET" and request_path == "/agents":

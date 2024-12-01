@@ -15,7 +15,6 @@ def context_exists(context_id: str) -> dict:
         return False
     
 def create_context(agent_id: str, user_id: str):
-    agent = get_agent_for_user(agent_id, user_id)
     context = {
         CONTEXTS_PRIMARY_KEY: str(uuid.uuid4()),
         "agent_id": agent_id,
