@@ -1,18 +1,25 @@
-from typing import List, Tuple, Callable, Any
+from typing import List, Tuple, Callable, Any, Type
 from pydantic import BaseModel
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage
+
+class AgentTool(BaseModel):
+  function: Callable[[Any], str]
+  params: Type[BaseModel]
+  pass_context: bool = False
 
 class AgentChat:
   def __init__(
       self,
       llm: BaseChatModel,
       prompt: str,
-      tools: List[Tuple[BaseModel, Callable[[Any], str]]] = None,
-      messages: List[BaseMessage] = []
+      tools: List[AgentTool] = None,
+      messages: List[BaseMessage] = [],
+      context: dict = None,
   ):
     self.messages = messages
+    self.context = context
     prompt = ChatPromptTemplate.from_messages([
         ("system", prompt),
         (MessagesPlaceholder(variable_name="messages"))
@@ -20,9 +27,9 @@ class AgentChat:
     if tools:
       tool_params_list = []
       self.name_to_tool = {}
-      for tool_params, tool in tools:
-        tool_params_list.append(tool_params)
-        self.name_to_tool[tool_params.__name__] = tool
+      for tool in tools:
+        tool_params_list.append(tool.params)
+        self.name_to_tool[tool.params.__name__] = tool
       llm = llm.bind_tools(tool_params_list)
     self.prompt_chain = prompt | llm
 
@@ -32,7 +39,8 @@ class AgentChat:
     if len(response.tool_calls) > 0:
       for tool_call in response.tool_calls:
         try:
-          tool_response = self.name_to_tool[tool_call["name"]](**tool_call['args'])
+          tool = self.name_to_tool[tool_call["name"]]
+          tool_response = tool.function(**tool_call['args'], context=self.context) if tool.pass_context else tool.function(**tool_call['args'])
           tool_message = ToolMessage(tool_call_id=tool_call['id'], content=tool_response)
         except Exception as e:
           tool_message = ToolMessage(tool_call_id=tool_call['id'], content=f"Issue calling tool: {tool_call['name']}, error: {e}")
