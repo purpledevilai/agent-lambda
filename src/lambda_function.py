@@ -9,6 +9,7 @@ from RequestHandlers.GetContextHandler import get_context_handler
 from RequestHandlers.GetAgentsHandler import get_agents_handler
 from RequestHandlers.CreateOrganizationHandler import create_organization_handler
 from RequestHandlers.CreateUserHandler import create_user_handler
+from RequestHandlers.CreateOrUpdateAgentHandler import create_or_update_agent_handler
 
 public_endpoints = [("GET", "/context"), ("POST", "/chat")]
 
@@ -76,6 +77,21 @@ def lambda_handler(event, context):
         if request_method == "GET" and request_path == "/agents":
             org_id = request_params.get("org_id")
             response = get_agents_handler(user_id, org_id)
+
+        if request_method == "POST" and request_path == "/agent":
+            # Get the body of the request
+            body = json.loads(event["body"])
+
+            params = {
+                "user_id": user_id,
+                "org_id": body.get("org_id"),
+                "agent_id": body.get("agent_id"),
+                "prompt": body.get("prompt"),
+                "is_public": body.get("is_public", False),
+                "agent_name": body.get("agent_name"),
+                "agent_description": body.get("agent_description")
+            }
+            response = create_or_update_agent_handler(**params)
         
         # CHAT: /chat
         if request_method == "POST" and request_path == "/chat":
