@@ -10,6 +10,7 @@ from RequestHandlers.GetAgentsHandler import get_agents_handler
 from RequestHandlers.CreateOrganizationHandler import create_organization_handler
 from RequestHandlers.CreateUserHandler import create_user_handler
 from RequestHandlers.CreateOrUpdateAgentHandler import create_or_update_agent_handler
+from RequestHandlers.GetUserHandler import get_user_handler
 
 public_endpoints = [("GET", "/context"), ("POST", "/chat")]
 
@@ -26,10 +27,11 @@ def lambda_handler(event, context):
         request_method = event["httpMethod"]
         request_path = event["path"]
         request_params = event.get("queryStringParameters") if event.get("queryStringParameters") is not None else {}
-        response = None
+        response = None # Gets set by the request handlers
 
         # Get the user from the token
         user_id = None
+        user = None
         try:
             # Get authentication token
             if "headers" not in event or "Authorization" not in event["headers"]:
@@ -46,6 +48,11 @@ def lambda_handler(event, context):
         # POST /user - Create a new user
         if request_method == "POST" and request_path == "/user":
             response = create_user_handler(user_id)
+
+        # GET /user - Get the user
+        if request_method == "GET" and request_path == "/user":
+            print(json.dumps(user, indent=4))
+            response = get_user_handler(user)
 
         # POST: /orgainization - Create a new organization
         if request_method == "POST" and request_path == "/organization":
