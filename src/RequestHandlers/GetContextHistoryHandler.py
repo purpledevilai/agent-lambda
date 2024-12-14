@@ -33,6 +33,9 @@ def get_context_history(user_id):
         transformedContext = transform_context_for_frontend(context)
         returnContexts.append(transformedContext)
 
+    # Sort the contexts by time_stamp
+    returnContexts.sort(key=lambda x: x["time_stamp"], reverse=True)
+
     return returnContexts
 
 
