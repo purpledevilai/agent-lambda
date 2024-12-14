@@ -5,7 +5,7 @@ import decimal
 def default_type_error_handler(obj):
     if isinstance(obj, decimal.Decimal):
         return int(obj)
-    raise TypeError
+    raise Exception(f"Object of type {type(obj)} with value of {repr(obj)} is not JSON serializable")
 
 def create_api_gateway_response(status_code, body):
     return {

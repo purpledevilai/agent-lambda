@@ -11,6 +11,7 @@ from RequestHandlers.CreateOrganizationHandler import create_organization_handle
 from RequestHandlers.CreateUserHandler import create_user_handler
 from RequestHandlers.CreateOrUpdateAgentHandler import create_or_update_agent_handler
 from RequestHandlers.GetUserHandler import get_user_handler
+from RequestHandlers.GetContextHistoryHandler import get_context_history
 
 public_endpoints = [("GET", "/context"), ("POST", "/chat")]
 
@@ -79,6 +80,10 @@ def lambda_handler(event, context):
                 "user_id": user_id
             }
             response = get_context_handler(**params)
+
+        # GET: /context-history
+        if request_method == "GET" and request_path == "/context-history":
+            response = get_context_history(user_id)
 
         # GET: /agents
         if request_method == "GET" and request_path == "/agents":
