@@ -12,6 +12,7 @@ from RequestHandlers.CreateUserHandler import create_user_handler
 from RequestHandlers.CreateOrUpdateAgentHandler import create_or_update_agent_handler
 from RequestHandlers.GetUserHandler import get_user_handler
 from RequestHandlers.GetContextHistoryHandler import get_context_history
+from RequestHandlers.DeleteContextHandler import delete_context_handler
 
 public_endpoints = [("GET", "/context"), ("POST", "/chat")]
 
@@ -80,6 +81,14 @@ def lambda_handler(event, context):
                 "user_id": user_id
             }
             response = get_context_handler(**params)
+
+        # DELETE: /context
+        if request_method == "DELETE" and request_path == "/context":
+            params = {
+                "context_id": request_params.get("context_id"),
+                "user_id": user_id
+            }
+            response = delete_context_handler(**params)
 
         # GET: /context-history
         if request_method == "GET" and request_path == "/context-history":
