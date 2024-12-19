@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import uuid
-from AWS.DynamoDBFunctions import get_item, put_item, get_all_items_by_index
+from src.AWS.DynamoDB import get_item, put_item, get_all_items_by_index
 
 AGENTS_TABLE_NAME = os.environ["AGENTS_TABLE_NAME"]
 AGENTS_PRIMARY_KEY = os.environ["AGENTS_PRIMARY_KEY"]

@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import uuid
-from AWS.DynamoDBFunctions import get_item, put_item, get_all_items_by_index, delete_item
+from src.AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item, delete_all_items_by_index
 
 CONTEXTS_TABLE_NAME = os.environ["CONTEXTS_TABLE_NAME"]
 CONTEXTS_PRIMARY_KEY = os.environ["CONTEXTS_PRIMARY_KEY"]
@@ -47,5 +47,8 @@ def get_contexts_by_user_id(user_id: str) -> list[dict]:
 
 def delete_context(context_id: str):
     delete_item(CONTEXTS_TABLE_NAME, CONTEXTS_PRIMARY_KEY, context_id)
+
+def delete_all_contexts_for_user(user_id: str) -> None:
+    delete_all_items_by_index(CONTEXTS_TABLE_NAME, "user_id", user_id)
     
 

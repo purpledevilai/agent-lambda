@@ -1,10 +1,17 @@
 import os
 from datetime import datetime
-import uuid
-from AWS.DynamoDBFunctions import get_item, put_item
+from src.AWS.DynamoDB import get_item, put_item, delete_item
+from pydantic import BaseModel
 
 USERS_TABLE_NAME = os.environ["USERS_TABLE_NAME"]
 USERS_PRIMARY_KEY = os.environ["USERS_PRIMARY_KEY"]
+
+
+class User(BaseModel):
+    user_id: str
+    organizations: list[str]
+    created_at: int
+    updated_at: int
 
 
 def user_exists(user_id: str) -> bool:
@@ -15,25 +22,31 @@ def user_exists(user_id: str) -> bool:
         return False
 
 
-def create_user(user_id: str) -> dict:
-    user = {
+def create_user(user_id: str) -> User:
+    userData = {
         USERS_PRIMARY_KEY: user_id,
         "organizations": [],
         "created_at": int(datetime.timestamp(datetime.now())),
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
-    put_item(USERS_TABLE_NAME, user)
+    user = User(**userData)
+    put_item(USERS_TABLE_NAME, userData)
     return user
 
 
-def get_user(user_id: str) -> dict:
-    try:
-        return get_item(USERS_TABLE_NAME, USERS_PRIMARY_KEY, user_id)
-    except:
+def get_user(user_id: str) -> User:
+    item = get_item(USERS_TABLE_NAME, USERS_PRIMARY_KEY, user_id)
+    if item is None:
         raise Exception(f"User with id: {user_id} does not exist")
-    
+    return User(**item)
+
+
 def save_user(user: dict) -> dict:
     put_item(USERS_TABLE_NAME, user)
+
+def delete_user(user_id: str) -> None:
+    delete_item(USERS_TABLE_NAME, USERS_PRIMARY_KEY, user_id)
+
 
 def associate_organization_with_user(user_id: str, organization_id: str,) -> dict:
     user = get_user(user_id)
@@ -41,8 +54,7 @@ def associate_organization_with_user(user_id: str, organization_id: str,) -> dic
     save_user(user)
     return user
 
+
 def user_is_member_of_organization(user_id: str, organization_id: str) -> bool:
     user = get_user(user_id)
     return organization_id in user["organizations"]
-
-
