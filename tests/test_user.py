@@ -2,10 +2,9 @@ import json
 import unittest
 import sys
 sys.path.append("../")
-from src.lambda_function import lambda_handler
 from tests.helper_funcs import create_request
 from tests.config import access_token, user_email
-
+from src.lambda_function import lambda_handler
 
 class TestUser(unittest.TestCase):
     def test_get_user(self):
@@ -32,6 +31,26 @@ class TestUser(unittest.TestCase):
         self.assertEqual(result["statusCode"], 401)
 
 
+    # def test_delete_user(self):
+    #     request = create_request(
+    #         method="DELETE",
+    #         path="/user",
+    #         headers={
+    #             "Authorization": access_token
+    #         }
+    #     )
+    #     result = lambda_handler(request, None)
+    #     self.assertEqual(result["statusCode"], 200) # Deletion successful
 
+    #     request = create_request(
+    #         method="GET",
+    #         path="/user",
+    #         headers={
+    #             "Authorization": access_token
+    #         }
+    #     )
+    #     result = lambda_handler(request, None)
+    #     self.assertEqual(result["statusCode"], 401) # Unauthorized after delete
+        
 if __name__ == '__main__':
     unittest.main()

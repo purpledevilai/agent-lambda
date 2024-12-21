@@ -11,7 +11,8 @@ class Organization(BaseModel):
     org_id: str
     name: str
     users: list[str]
-
+    created_at: int
+    updated_at: int
 
 def organization_exists(organization_id: str) -> bool:
     try:
@@ -20,18 +21,17 @@ def organization_exists(organization_id: str) -> bool:
     except:
         return False
 
-
-def create_organization(organization_name: str) -> dict:
-    organization = {
+def create_organization(organization_name: str) -> Organization:
+    organizationData = {
         ORGANIZATIONS_PRIMARY_KEY: str(uuid.uuid4()),
         "name": organization_name,
         "users": [],
         "created_at": int(datetime.timestamp(datetime.now())),
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
-    put_item(ORGANIZATIONS_TABLE_NAME, organization)
+    organization = Organization(**organizationData)
+    put_item(ORGANIZATIONS_TABLE_NAME, organizationData)
     return organization
-
 
 def get_organization(organization_id: str) -> Organization:
     item = get_item(ORGANIZATIONS_TABLE_NAME, ORGANIZATIONS_PRIMARY_KEY, organization_id)
@@ -39,15 +39,15 @@ def get_organization(organization_id: str) -> Organization:
         raise Exception(f"Organization with id: {organization_id} does not exist")
     return Organization(**item)
     
-def save_organization(organization: Organization):
+def save_organization(organization: Organization) -> None:
     put_item(ORGANIZATIONS_TABLE_NAME, organization.model_dump())
 
 def delete_organization(organization_id: str) -> None:
     delete_item(ORGANIZATIONS_TABLE_NAME, ORGANIZATIONS_PRIMARY_KEY, organization_id)
 
-def associate_user_with_organization(organization_id: str, user_id: str) -> dict:
+def associate_user_with_organization(organization_id: str, user_id: str) -> Organization:
     organization = get_organization(organization_id)
-    organization["users"].append(user_id)
+    organization.users.append(user_id)
     save_organization(organization)
     return organization
 

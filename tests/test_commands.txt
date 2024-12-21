@@ -1,0 +1,10 @@
+
+# For the tests directory
+python -m unittest discover tests
+
+# For a specific test file
+python -m unittest tests/test_file.py
+
+# For a specific test method
+python -m unittest tests.test_file.TestClassName.test_method_name
+python -m unittest tests.test_user.TestUser.test_delete_user

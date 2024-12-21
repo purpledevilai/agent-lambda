@@ -1,7 +1,7 @@
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
-from Models.User import get_user
-from Models.Organization import get_organization
+from Models import User
+from Models import Organization
 from pydantic import BaseModel
 
 class GetUserOrg(BaseModel):
@@ -17,10 +17,10 @@ class GetUserResponse(BaseModel):
 
 def get_user_handler(lambda_event: LambdaEvent, user: CognitoUser) -> GetUserResponse:
     # User
-    dbUser = get_user(user.sub)
+    dbUser = User.get_user(user.sub)
 
     def get_filtered_organization(org_id):
-        org = get_organization(org_id)
+        org = Organization.get_organization(org_id)
         return {
             "id": org.org_id,
             "name": org.name,

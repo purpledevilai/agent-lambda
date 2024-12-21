@@ -5,14 +5,22 @@ from AWS.Lambda import LambdaEvent
 from AWS.Cognito import get_user_from_cognito, CognitoUser
 from AWS.APIGateway import create_api_gateway_response, APIGatewayResponse
 from AWS.CloudWatchLogs import get_logger
+
+# User
+from RequestHandlers.User.CreateUserHandler import create_user_handler
+from RequestHandlers.User.GetUserHandler import get_user_handler
+from RequestHandlers.User.DeleteUserHandler import delete_user_handler
+
+# Organization
+from RequestHandlers.Organization.CreateOrganizationHandler import create_organization_handler
+
+
+
 from RequestHandlers.ChatHandler import chat_handler
 from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
 from RequestHandlers.GetContextHandler import get_context_handler
 from RequestHandlers.GetAgentsHandler import get_agents_handler
-from RequestHandlers.CreateOrganizationHandler import create_organization_handler
-from src.RequestHandlers.User.CreateUserHandler import create_user_handler
 from RequestHandlers.CreateOrUpdateAgentHandler import create_or_update_agent_handler
-from src.RequestHandlers.User.GetUserHandler import get_user_handler
 from RequestHandlers.GetContextHistoryHandler import get_context_history
 from RequestHandlers.DeleteContextHandler import delete_context_handler
 from pydantic import BaseModel
@@ -24,9 +32,10 @@ public_endpoints = [("GET", "/context"), ("POST", "/chat")]
 handler_registry = {
     "/user": {
         "POST": create_user_handler,
-        "GET": get_user_handler
+        "GET": get_user_handler,
+        "DELETE": delete_user_handler
     },
-    "/orgainization": {
+    "/organization": {
         "POST": create_organization_handler
     },
     "/context": {
