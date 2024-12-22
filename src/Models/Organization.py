@@ -40,6 +40,7 @@ def get_organization(organization_id: str) -> Organization:
     return Organization(**item)
     
 def save_organization(organization: Organization) -> None:
+    organization.updated_at = int(datetime.timestamp(datetime.now()))
     put_item(ORGANIZATIONS_TABLE_NAME, organization.model_dump())
 
 def delete_organization(organization_id: str) -> None:

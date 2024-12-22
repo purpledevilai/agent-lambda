@@ -37,6 +37,7 @@ def get_user(user_id: str) -> User:
     return User(**item)
 
 def save_user(user: User) -> None:
+    user.updated_at = int(datetime.timestamp(datetime.now()))
     put_item(USERS_TABLE_NAME, user.model_dump())
 
 def delete_user(user_id: str) -> None:

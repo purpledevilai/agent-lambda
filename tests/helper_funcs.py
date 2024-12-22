@@ -11,7 +11,7 @@ class Request(TypedDict):
 def create_request(
         method: str, 
         path: str,
-        headers: dict,
+        headers: Optional[dict] = {},
         body: Optional[dict] = None, 
         query_string_parameters: Optional[dict] = None, 
     ) -> Request:

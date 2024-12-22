@@ -1,11 +1,34 @@
 import os
 from datetime import datetime
 import uuid
-from src.AWS.DynamoDB import get_item, put_item, get_all_items_by_index
+from src.AWS.DynamoDB import get_item, put_item, delete_item, get_all_items_by_index
+from AWS.CloudWatchLogs import get_logger
+from pydantic import BaseModel
+from typing import Optional
+from Models import User
+
+logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
 AGENTS_TABLE_NAME = os.environ["AGENTS_TABLE_NAME"]
 AGENTS_PRIMARY_KEY = os.environ["AGENTS_PRIMARY_KEY"]
 
+class Agent(BaseModel):
+    agent_id: str
+    agent_name: str
+    agent_description: str
+    prompt: str
+    org_id: str
+    is_public: bool
+    is_default_agent: bool
+    agent_speaks_first: bool
+    tools: Optional[list[str]] = []
+    created_at: int
+    updated_at: int
+
+class HistoryAgent(BaseModel):
+    agent_id: str
+    agent_name: str
+    agent_description: str
 
 def agent_exists(agent_id: str) -> bool:
     try:
@@ -13,85 +36,84 @@ def agent_exists(agent_id: str) -> bool:
         return True
     except:
         return False
-
-
-def create_agent(agent_name: str, prompt: str, user_id: str, org_id: str, is_public: bool, agent_description: str) -> dict:
-    agent = {
+    
+def create_agent(
+        agent_name: str,
+        agent_description: str,
+        prompt: str,
+        org_id: str,
+        is_public: bool,
+        agent_speaks_first: bool,
+        tools: Optional[list[str]],
+    ) -> Agent:
+    agentData = {
         AGENTS_PRIMARY_KEY: str(uuid.uuid4()),
         "agent_name": agent_name,
+        "agent_description": agent_description,
         "prompt": prompt,
-        "user_id": user_id,
         "org_id": org_id,
         "is_public": is_public,
-        "agent_description": agent_description,
+        "agent_speaks_first": agent_speaks_first,
         "is_default_agent": False,
+        "tools": tools,
         "created_at": int(datetime.timestamp(datetime.now())),
+        "updated_at": int(datetime.timestamp(datetime.now())),
     }
-    put_item(AGENTS_TABLE_NAME, agent)
+    agent = Agent(**agentData)
+    put_item(AGENTS_TABLE_NAME, agentData)
     return agent
 
-def update_agent(agent_id: str, agent_name: str, prompt: str, is_public: bool, agent_description: str) -> dict:
+def get_agent(agent_id: str) -> Agent:
+    item = get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id)
+    if item is None:
+        raise Exception(f"Agent with id: {agent_id} does not exist", 404)
+    return Agent(**item)
+
+def save_agent(agent: Agent) -> None:
+    agent.updated_at = int(datetime.timestamp(datetime.now()))
+    put_item(AGENTS_TABLE_NAME, agent.model_dump())
+
+def delete_agent(agent_id: str) -> None:
+    delete_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id)
+
+def get_agent_for_user(agent_id: str, user: User.User) -> Agent:
     agent = get_agent(agent_id)
-    if agent.get("is_default_agent"):
-        raise Exception("Cannot update default agent")
-    if agent_name != None:
-        agent["agent_name"] = agent_name
-    if prompt != None:
-        agent["prompt"] = prompt
-    if is_public != agent.get("is_public"):
-        agent["is_public"] = is_public
-    if agent_description != None:
-        agent["agent_description"] = agent_description
-    put_item(AGENTS_TABLE_NAME, agent)
-    return agent
+    if (agent.is_public):
+        return agent
+    if (agent.org_id == "default"):
+        return agent
+    if (agent.org_id in user.organizations):
+        return agent
+    raise Exception(f"Agent does not belong to user's orgs", 403)
 
+def parse_agent_items(items: list[dict]) -> list[Agent]:
+    agents = []
+    for item in items:
+        try:
+            agents.append(Agent(**item))
+        except Exception as e:
+            logger.error(f"Error parsing agent: {item}")
+    return agents
 
-def get_agent(agent_id: str) -> dict:
-    try:
-        return get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id)
-    except:
-        raise Exception(f"Agent with id: {agent_id} does not exist")
+def get_agents_in_org(org_id: str) -> list[Agent]:
+    items = get_all_items_by_index(AGENTS_TABLE_NAME, "org_id", org_id)
+    return parse_agent_items(items)
 
+def get_default_agents() -> list[Agent]:
+    itmes = get_all_items_by_index(AGENTS_TABLE_NAME, "org_id", "default")
+    return parse_agent_items(itmes)
 
-def get_agent_for_user(agent_id: str, user_id: str) -> dict:
+def get_public_agent(agent_id: str) -> Agent:
     agent = get_agent(agent_id)
-    if (agent.get("is_public")):
+    if (agent.is_public):
         return agent
-    if (agent.get("user_id") == user_id):
-        return agent
-    if (agent.get("is_default_agent") and user_id != None):
-        return agent
-    raise Exception(f"Agent does not belong to user")
+    raise Exception(f"Agent is not public", 403)
 
-def get_agents_in_org(org_id: str):
-    return get_all_items_by_index(AGENTS_TABLE_NAME, "org_id", org_id)
-
-def get_public_agent(agent_id: str) -> dict:
-    agent = get_agent(agent_id)
-    if (agent.get("is_public")):
-        return agent
-    raise Exception(f"Agent is not public")
+def transform_to_history_agent(agent: Agent) -> HistoryAgent:
+    return HistoryAgent(
+        agent_id=agent.agent_id,
+        agent_name=agent.agent_name,
+        agent_description=agent.agent_description
+   )
 
 
-def save_agent(agent: dict) -> dict:
-    put_item(AGENTS_TABLE_NAME, agent)
-
-
-def get_default_agents() -> list[dict]:
-    return get_all_items_by_index(AGENTS_TABLE_NAME, "user_id", "default")
-
-
-def get_agents_for_user(user_id: str):
-    default_agents = get_default_agents()
-    user_agents = get_all_items_by_index(AGENTS_TABLE_NAME, "user_id", user_id)
-    return default_agents + user_agents
-
-def get_agent_for_orgs(agent_id: str, org_ids: list[str]):
-    agent = get_agent(agent_id)
-    if (agent.get("is_public")):
-        return agent
-    if (agent.get("org_id") == "default"):
-        return agent
-    if (agent.get("org_id") in org_ids):
-        return agent
-    raise Exception(f"Agent does not belong to users orgs")

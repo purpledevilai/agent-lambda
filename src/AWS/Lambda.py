@@ -1,10 +1,10 @@
-from dataclasses import dataclass
+from pydantic import BaseModel
 from typing import Optional
 
-@dataclass
-class LambdaEvent:
+class LambdaEvent(BaseModel):
     path: str
-    httpMethod: dict
-    queryStringParameters: Optional[dict]
-    headers: dict
-    body: Optional[str]
+    httpMethod: str
+    queryStringParameters: Optional[dict] = {}
+    requestParameters: Optional[dict] = {}
+    headers: Optional[dict] = {}
+    body: Optional[str] = None

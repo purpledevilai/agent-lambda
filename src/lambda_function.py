@@ -1,6 +1,8 @@
 import os
 import json
+import re
 from typing import Optional
+from pydantic import BaseModel
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import get_user_from_cognito, CognitoUser
 from AWS.APIGateway import create_api_gateway_response, APIGatewayResponse
@@ -14,47 +16,103 @@ from RequestHandlers.User.DeleteUserHandler import delete_user_handler
 # Organization
 from RequestHandlers.Organization.CreateOrganizationHandler import create_organization_handler
 
+# Context
+from RequestHandlers.Context.CreateContextHandler import create_context_handler
+from RequestHandlers.Context.GetContextHandler import get_context_handler
+from RequestHandlers.Context.DeleteContextHandler import delete_context_handler
+from RequestHandlers.Context.GetContextHistoryHandler import get_context_history_handler
 
-
+# Chat
 from RequestHandlers.ChatHandler import chat_handler
-from RequestHandlers.GetChatHistoryHandler import get_chat_history_handler
-from RequestHandlers.GetContextHandler import get_context_handler
+
+# Agents
 from RequestHandlers.GetAgentsHandler import get_agents_handler
 from RequestHandlers.CreateOrUpdateAgentHandler import create_or_update_agent_handler
-from RequestHandlers.GetContextHistoryHandler import get_context_history
-from RequestHandlers.DeleteContextHandler import delete_context_handler
-from pydantic import BaseModel
 
+# Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
-public_endpoints = [("GET", "/context"), ("POST", "/chat")]
-
+# Handler registry
 handler_registry = {
     "/user": {
-        "POST": create_user_handler,
-        "GET": get_user_handler,
-        "DELETE": delete_user_handler
+        "POST": {
+            "handler": create_user_handler,
+            "public": False
+        },
+        "GET": {
+            "handler": get_user_handler,
+            "public": False
+        },
+        "DELETE": {
+            "handler": delete_user_handler,
+            "public": False
+        }
     },
     "/organization": {
-        "POST": create_organization_handler
+        "POST": {
+            "handler": create_organization_handler,
+            "public": False
+        }
     },
     "/context": {
-        "GET": get_context_handler,
-        "DELETE": delete_context_handler
+        "POST": {
+            "handler": create_context_handler,
+            "public": True
+        }
+    },
+    "/context/{context_id}": {
+        "GET": {
+            "handler": get_context_handler,
+            "public": True
+        },
+        "DELETE": {
+            "handler": delete_context_handler,
+            "public": False
+        }
     },
     "/context-history": {
-        "GET": get_context_history
+        "GET": {
+            "handler": get_context_history_handler,
+            "public": False
+        }
     },
     "/agents": {
-        "GET": get_agents_handler
+        "GET": {
+            "handler": get_agents_handler,
+            "public": False
+        }
     },
     "/agent": {
-        "POST": create_or_update_agent_handler
+        "POST": {
+            "handler": create_or_update_agent_handler,
+            "public": False
+        }
     },
     "/chat": {
-        "POST": chat_handler
+        "POST": {
+            "handler": chat_handler,
+            "public": True
+        }
     }
 }
+
+def match_route(request_path: str, method: str, handler_registry: dict) -> tuple:
+    for route, methods in handler_registry.items():
+        # Replace placeholder variables with regex capture groups
+        route_pattern = re.sub(r'\{(\w+)\}', r'(?P<\1>[^/]+)', route)
+        route_regex = f"^{route_pattern}$"
+        match = re.match(route_regex, request_path)
+        
+        if match:
+            handler_info = methods.get(method)
+            if handler_info:
+                # Extract named groups as parameters
+                params = match.groupdict()
+                handler = handler_info.get('handler')
+                is_public = handler_info.get('public', False)  # Default to False if 'public' key is missing
+                return handler, params, is_public
+    
+    return None, None, None
 
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
@@ -69,6 +127,12 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
         request_path: str = lambda_event.path
         request_method: str = lambda_event.httpMethod
 
+        # Get the handler for the request
+        handler, request_params, is_public = match_route(request_path, request_method, handler_registry)
+        if not handler:
+            raise Exception("Invalid request path", 404)
+        lambda_event.requestParameters = request_params
+
         # Get the user, if any, from the token
         user: Optional[CognitoUser] = None
         try:
@@ -79,19 +143,11 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
         except Exception as e:
             logger.error(str(e))
             # No user, but request is to a public endpoint
-            if (request_method, request_path) not in public_endpoints:
+            if not is_public:
                 raise Exception("Not authenticated", 401)
             
-        # Path exists
-        if request_path not in handler_registry:
-            raise Exception("Invalid request path")
-        
-        # Method exists
-        if request_method not in handler_registry[request_path]:
-            raise Exception("Invalid request method")
-        
         # Call the handler
-        response: BaseModel = handler_registry[request_path][request_method](
+        response: BaseModel = handler(
             lambda_event=lambda_event,
             user=user
         )
@@ -99,99 +155,6 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
         # Return the response 
         return create_api_gateway_response(200, response.model_dump())
             
-            
-        # # POST /user - Create a new user
-        # if request_method == "POST" and request_path == "/user":
-        #     response = create_user_handler(user_id)
-
-        # # GET /user - Get the user
-        # if request_method == "GET" and request_path == "/user":
-        #     print(json.dumps(user, indent=4))
-        #     response = get_user_handler(user)
-
-        # # POST: /orgainization - Create a new organization
-        # if request_method == "POST" and request_path == "/organization":
-        #     # Get the body of the request
-        #     body = json.loads(event["body"])
-
-        #     # Check for required params
-        #     if "name" not in body:
-        #         raise Exception("No name provided")
-            
-        #     # Create the organization
-        #     response = create_organization_handler(body["name"], user_id)
-
-        # # GET: /chat-history
-        # if request_method == "GET" and request_path == "/chat-history":
-        #     response = get_chat_history_handler(user_id)
-
-        # # GET: /context
-        # if request_method == "GET" and request_path == "/context":
-        #     params = {
-        #         "context_id": request_params.get("context_id"),
-        #         "agent_id": request_params.get("agent_id"),
-        #         "invoke_agent_message": request_params.get("invoke_agent_message", "False").lower() == "true",
-        #         "user_id": user_id
-        #     }
-        #     response = get_context_handler(**params)
-
-        # # DELETE: /context
-        # if request_method == "DELETE" and request_path == "/context":
-        #     params = {
-        #         "context_id": request_params.get("context_id"),
-        #         "user_id": user_id
-        #     }
-        #     response = delete_context_handler(**params)
-
-        # # GET: /context-history
-        # if request_method == "GET" and request_path == "/context-history":
-        #     response = get_context_history(user_id)
-
-        # # GET: /agents
-        # if request_method == "GET" and request_path == "/agents":
-        #     org_id = request_params.get("org_id")
-        #     response = get_agents_handler(user_id, org_id)
-
-        # if request_method == "POST" and request_path == "/agent":
-        #     # Get the body of the request
-        #     body = json.loads(event["body"])
-
-        #     params = {
-        #         "user_id": user_id,
-        #         "org_id": body.get("org_id"),
-        #         "agent_id": body.get("agent_id"),
-        #         "prompt": body.get("prompt"),
-        #         "is_public": body.get("is_public", False),
-        #         "agent_name": body.get("agent_name"),
-        #         "agent_description": body.get("agent_description")
-        #     }
-        #     response = create_or_update_agent_handler(**params)
-        
-        # # CHAT: /chat
-        # if request_method == "POST" and request_path == "/chat":
-        #     # Get the body of the request
-        #     body = json.loads(event["body"])
-
-        #     # Check for required params
-        #     if "message" not in body:
-        #         raise Exception("No message provided")
-            
-        #     # Create context_id if none provided
-        #     if "context_id" not in body:
-        #         raise Exception("No context_id provided")
-                
-        #     # Get the message and conversation ID
-        #     message = body["message"]
-        #     context_id = body["context_id"]
-
-        #     response = chat_handler(message, context_id, user_id)
-
-
-        # # NOT SUPPORTED
-        # if (response == None):
-        #     raise Exception("Invalid request path")
-        
-        # return create_api_gateway_response(200, response)
 
     # Return any errors   
     except Exception as e:

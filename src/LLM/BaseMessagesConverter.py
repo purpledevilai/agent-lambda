@@ -2,7 +2,7 @@ from typing import List
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage
 
 def base_messages_to_dict_messages(messages: List[BaseMessage]) -> List[dict]:
-  return [message.dict() for message in messages]
+  return [message.model_dump() for message in messages]
 
 def dict_messages_to_base_messages(messages: List[dict]) -> List[BaseMessage]:
   base_messages = []
