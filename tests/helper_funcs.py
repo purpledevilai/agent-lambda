@@ -13,7 +13,7 @@ def create_request(
         path: str,
         headers: Optional[dict] = {},
         body: Optional[dict] = None, 
-        query_string_parameters: Optional[dict] = None, 
+        query_string_parameters: Optional[dict] = {}, 
     ) -> Request:
     return {
         "httpMethod": method,

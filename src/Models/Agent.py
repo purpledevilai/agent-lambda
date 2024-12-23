@@ -20,7 +20,7 @@ class Agent(BaseModel):
     org_id: str
     is_public: bool
     is_default_agent: bool
-    agent_speaks_first: bool
+    agent_speaks_first: bool = False
     tools: Optional[list[str]] = []
     created_at: int
     updated_at: int
@@ -30,12 +30,25 @@ class HistoryAgent(BaseModel):
     agent_name: str
     agent_description: str
 
+class CreateAgentParams(BaseModel):
+    agent_name: str
+    agent_description: str
+    prompt: str
+    org_id: Optional[str] = None
+    is_public: bool
+    agent_speaks_first: bool
+    tools: Optional[list[str]] = []
+
+class UpdateAgentParams(BaseModel):
+    agent_name: Optional[str] = None
+    agent_description: Optional[str] = None
+    prompt: Optional[str] = None
+    is_public: Optional[bool] = None
+    agent_speaks_first: Optional[bool] = None
+    tools: Optional[list[str]] = None
+
 def agent_exists(agent_id: str) -> bool:
-    try:
-        get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id)
-        return True
-    except:
-        return False
+    return get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id) != None
     
 def create_agent(
         agent_name: str,
@@ -44,7 +57,7 @@ def create_agent(
         org_id: str,
         is_public: bool,
         agent_speaks_first: bool,
-        tools: Optional[list[str]],
+        tools: Optional[list[str]] = [],
     ) -> Agent:
     agentData = {
         AGENTS_PRIMARY_KEY: str(uuid.uuid4()),
@@ -92,7 +105,7 @@ def parse_agent_items(items: list[dict]) -> list[Agent]:
         try:
             agents.append(Agent(**item))
         except Exception as e:
-            logger.error(f"Error parsing agent: {item}")
+            logger.error(f"Error parsing agent: {e}")
     return agents
 
 def get_agents_in_org(org_id: str) -> list[Agent]:

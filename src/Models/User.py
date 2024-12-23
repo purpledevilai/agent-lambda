@@ -13,11 +13,7 @@ class User(BaseModel):
     updated_at: int
 
 def user_exists(user_id: str) -> bool:
-    try:
-        get_item(USERS_TABLE_NAME, USERS_PRIMARY_KEY, user_id)
-        return True
-    except:
-        return False
+    return get_item(USERS_TABLE_NAME, USERS_PRIMARY_KEY, user_id) != None
 
 def create_user(user_id: str) -> User:
     userData = {

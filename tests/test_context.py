@@ -113,9 +113,11 @@ class TestContext(unittest.TestCase):
 
         # Call the lambda handler
         result = lambda_handler(request, None)
+        print(result)
 
         # Check the response
         self.assertEqual(result["statusCode"], 403)
+
         
 
     def test_get_context(self):

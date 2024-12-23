@@ -4,6 +4,8 @@ from boto3.dynamodb.conditions import Key
 def get_item(table_name: str, primary_key_name: str, key: str) -> dict:
     table = boto3.resource("dynamodb").Table(table_name)
     response = table.get_item(Key={primary_key_name: key})
+    if "Item" not in response:
+        return None
     return response["Item"]
 
 def get_all_items(table_name: str) -> list[dict]:

@@ -15,11 +15,7 @@ class Organization(BaseModel):
     updated_at: int
 
 def organization_exists(organization_id: str) -> bool:
-    try:
-        get_item(ORGANIZATIONS_TABLE_NAME, ORGANIZATIONS_PRIMARY_KEY, organization_id)
-        return True
-    except:
-        return False
+    return get_item(ORGANIZATIONS_TABLE_NAME, ORGANIZATIONS_PRIMARY_KEY, organization_id) != None
 
 def create_organization(organization_name: str) -> Organization:
     organizationData = {

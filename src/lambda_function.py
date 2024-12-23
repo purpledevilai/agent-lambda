@@ -22,12 +22,15 @@ from RequestHandlers.Context.GetContextHandler import get_context_handler
 from RequestHandlers.Context.DeleteContextHandler import delete_context_handler
 from RequestHandlers.Context.GetContextHistoryHandler import get_context_history_handler
 
+# Agents
+from RequestHandlers.Agent.GetAgentsHandler import get_agents_handler
+from RequestHandlers.Agent.CreateAgentHandler import create_agent_handler
+from RequestHandlers.Agent.GetAgentHandler import get_agent_handler
+from RequestHandlers.Agent.UpdateAgentHandler import update_agent_handler
+from RequestHandlers.Agent.DeleteAgentHandler import delete_agent_handler
+
 # Chat
 from RequestHandlers.ChatHandler import chat_handler
-
-# Agents
-from RequestHandlers.GetAgentsHandler import get_agents_handler
-from RequestHandlers.CreateOrUpdateAgentHandler import create_or_update_agent_handler
 
 # Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
@@ -84,7 +87,21 @@ handler_registry = {
     },
     "/agent": {
         "POST": {
-            "handler": create_or_update_agent_handler,
+            "handler": create_agent_handler,
+            "public": False
+        }
+    },
+    "/agent/{agent_id}": {
+        "GET": {
+            "handler": get_agent_handler,
+            "public": True
+        },
+        "POST": {
+            "handler": update_agent_handler,
+            "public": False
+        },
+        "DELETE": {
+            "handler": delete_agent_handler,
             "public": False
         }
     },

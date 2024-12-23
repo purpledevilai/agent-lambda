@@ -47,11 +47,7 @@ class HistoryContext(BaseModel):
 
 
 def context_exists(context_id: str) -> bool:
-    try: 
-        get_item(CONTEXTS_TABLE_NAME, CONTEXTS_PRIMARY_KEY, context_id)
-        return True
-    except:
-        return False
+    return get_item(CONTEXTS_TABLE_NAME, CONTEXTS_PRIMARY_KEY, context_id) != None
     
 def create_context(agent_id: str, user_id: Optional[str]) -> Context:
     contextData = {
