@@ -26,7 +26,7 @@ class CreateContextParams(BaseModel):
     prompt_params: Optional[dict] = None
 
 class FilteredMessage(BaseModel):
-    sender: str = Field(..., alias='from') 
+    sender: str
     message: str
 
 class FilteredContext(BaseModel):
@@ -108,7 +108,7 @@ def transform_to_filtered_context(context: Context) -> FilteredContext:
     for message in context.messages:
         if (message["type"] == "human" or message["type"] == "ai"):
             messages.append(FilteredMessage(**{
-                "from": message["type"],
+                "sender": message["type"],
                 "message": message["content"]
             }))
     filtered_context = FilteredContext(**{

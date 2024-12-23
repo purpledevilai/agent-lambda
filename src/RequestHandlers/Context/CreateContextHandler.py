@@ -5,7 +5,7 @@ from AWS.Cognito import CognitoUser
 from Models import Context, Agent, User
 from Services import AgentService
 
-def create_context_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Context.Context:   
+def create_context_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Context.FilteredContext:   
     
     # Get the body of the request
     body = Context.CreateContextParams(**json.loads(lambda_event.body))
