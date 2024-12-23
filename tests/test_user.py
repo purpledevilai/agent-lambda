@@ -52,5 +52,3 @@ class TestUser(unittest.TestCase):
     #     result = lambda_handler(request, None)
     #     self.assertEqual(result["statusCode"], 401) # Unauthorized after delete
         
-if __name__ == '__main__':
-    unittest.main()

@@ -56,6 +56,3 @@ class TestOrganization(unittest.TestCase):
         user.organizations.remove(res_body["org_id"])
         User.save_user(user)
         
-
-if __name__ == '__main__':
-    unittest.main()

@@ -222,7 +222,3 @@ class TestContext(unittest.TestCase):
 
         # Clean up
         Context.delete_context(context.context_id)
-
-
-if __name__ == '__main__':
-    unittest.main()

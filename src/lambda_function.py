@@ -30,7 +30,7 @@ from RequestHandlers.Agent.UpdateAgentHandler import update_agent_handler
 from RequestHandlers.Agent.DeleteAgentHandler import delete_agent_handler
 
 # Chat
-from RequestHandlers.ChatHandler import chat_handler
+from RequestHandlers.Chat.ChatHandler import chat_handler
 
 # Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
