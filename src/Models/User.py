@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from src.AWS.DynamoDB import get_item, put_item, delete_item
+from AWS.DynamoDB import get_item, put_item, delete_item
 from pydantic import BaseModel
 
 USERS_TABLE_NAME = os.environ["USERS_TABLE_NAME"]

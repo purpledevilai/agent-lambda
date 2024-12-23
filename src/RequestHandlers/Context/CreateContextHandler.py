@@ -3,7 +3,7 @@ from typing import Optional
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Context, Agent, User
-from src.Services import AgentService
+from Services import AgentService
 
 def create_context_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Context.Context:   
     

@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import uuid
-from src.AWS.DynamoDB import get_item, put_item, delete_item, get_all_items_by_index
+from AWS.DynamoDB import get_item, put_item, delete_item, get_all_items_by_index
 from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel
 from typing import Optional

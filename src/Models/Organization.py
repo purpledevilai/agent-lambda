@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import uuid
-from src.AWS.DynamoDB import get_item, put_item, delete_item
+from AWS.DynamoDB import get_item, put_item, delete_item
 from pydantic import BaseModel
 
 ORGANIZATIONS_TABLE_NAME = os.environ["ORGANIZATIONS_TABLE_NAME"]
