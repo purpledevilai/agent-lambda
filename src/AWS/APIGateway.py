@@ -1,5 +1,6 @@
 import json
 import decimal
+from typing import TypedDict
 
 # Dumb thing to handle decimal types
 def default_type_error_handler(obj):
@@ -7,7 +8,12 @@ def default_type_error_handler(obj):
         return int(obj)
     raise Exception(f"Object of type {type(obj)} with value of {repr(obj)} is not JSON serializable")
 
-def create_api_gateway_response(status_code, body):
+class APIGatewayResponse(TypedDict):
+    statusCode: int
+    headers: dict
+    body: str
+
+def create_api_gateway_response(status_code, body) -> APIGatewayResponse:
     return {
         "statusCode": status_code,
         "headers": {
