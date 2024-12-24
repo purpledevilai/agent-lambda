@@ -16,11 +16,16 @@ def get_context_history_handler(lambda_event: LambdaEvent, user: CognitoUser) ->
 
     agents = {}
     for agent_id in agent_ids:
-        agent = Agent.get_agent(agent_id)
-        agents[agent_id] = agent
+        try:
+            agent = Agent.get_agent(agent_id)
+            agents[agent_id] = agent
+        except:
+            pass
 
     return_contexts: list[Context.HistoryContext] = []
     for context in contexts:
+        if context.agent_id not in agents:
+            continue
         agent = agents[context.agent_id]
         history_context = Context.transform_to_history_context(context, agent)
         return_contexts.append(history_context)
