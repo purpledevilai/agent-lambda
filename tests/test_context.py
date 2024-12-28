@@ -6,7 +6,7 @@ from tests.helper_funcs import create_request
 from tests.config import access_token, agent_id_outside_of_org
 from src.lambda_function import lambda_handler
 # Import for test
-from src.Models import Context
+from src.Models import Context, Agent, User
 from src.AWS import Cognito
 
 
@@ -222,3 +222,41 @@ class TestContext(unittest.TestCase):
 
         # Clean up
         Context.delete_context(context.context_id)
+
+    def test_create_context_with_prompt_args(self):
+
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent("aj", "agent with prompt args", "Say hello to {name}", user.organizations[0], False, True)
+
+        create_context_body = {
+            "agent_id": agent.agent_id,
+            "prompt_args": {
+                "name": "Alice"
+            }
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={
+                "Authorization": access_token
+            },
+            body=create_context_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        res_body = json.loads(result["body"])
+
+        # Check for name in the first message
+        self.assertTrue("Alice" in res_body["messages"][0]["message"])
+
+        # Clean up
+        Context.delete_context(res_body["context_id"])
+        Agent.delete_agent(agent.agent_id)

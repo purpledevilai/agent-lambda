@@ -3,11 +3,11 @@ from typing import Optional
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Agent, User, Context, Chat
-import Tools
-import Tools.SetPrompt
+from Tools.ToolRegistry import tool_registry
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
+
 
 def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agent.Agent:  
 
@@ -25,13 +25,6 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         context = Context.get_public_context(body.context_id)
         agent = Agent.get_public_agent(context.agent_id)
 
-    # Set up tools
-    tools = []
-    if (agent.tools):
-        for tool in agent.tools:
-            if (tool == "set-prompt"):
-                tools.append(Tools.SetPrompt.set_prompt_tool)
-
     # Context dict for context updates
     context_dict = context.model_dump()
 
@@ -40,7 +33,7 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         create_llm(),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
-        tools=tools,
+        tools=[tool_registry[tool] for tool in agent.tools] if agent.tools else [],
         context=context_dict
     )
 

@@ -19,11 +19,12 @@ class Context(BaseModel):
     messages: list[dict]
     created_at: int
     updated_at: int
+    prompt_args: Optional[dict] = None
 
 class CreateContextParams(BaseModel):
     agent_id: str
     invoke_agent_message: Optional[bool] = False
-    prompt_params: Optional[dict] = None
+    prompt_args: Optional[dict] = None
 
 class FilteredMessage(BaseModel):
     sender: str
@@ -49,12 +50,13 @@ class HistoryContext(BaseModel):
 def context_exists(context_id: str) -> bool:
     return get_item(CONTEXTS_TABLE_NAME, CONTEXTS_PRIMARY_KEY, context_id) != None
     
-def create_context(agent_id: str, user_id: Optional[str]) -> Context:
+def create_context(agent_id: str, user_id: Optional[str] = None, prompt_args: Optional[dict] = None) -> Context:
     contextData = {
         CONTEXTS_PRIMARY_KEY: str(uuid.uuid4()),
         "agent_id": agent_id,
         "user_id": user_id if user_id is not None else "public",
         "messages": [],
+        "prompt_args": prompt_args,
         "created_at": int(datetime.timestamp(datetime.now())),
         "updated_at": int(datetime.timestamp(datetime.now())),
     }

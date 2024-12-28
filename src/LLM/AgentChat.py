@@ -20,7 +20,9 @@ class AgentChat:
   ):
     self.messages = messages
     self.context = context
-    prompt = ChatPromptTemplate.from_messages([
+    if context.get("prompt_args") and context["prompt_args"]:
+      prompt = prompt.format(**context["prompt_args"])
+    chat_prompt_template = ChatPromptTemplate.from_messages([
         ("system", prompt),
         (MessagesPlaceholder(variable_name="messages"))
     ])
@@ -31,7 +33,7 @@ class AgentChat:
         tool_params_list.append(tool.params)
         self.name_to_tool[tool.params.__name__] = tool
       llm = llm.bind_tools(tool_params_list)
-    self.prompt_chain = prompt | llm
+    self.prompt_chain = chat_prompt_template | llm
 
   def invoke(self):
     response = self.prompt_chain.invoke({"messages": self.messages})
