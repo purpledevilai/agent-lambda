@@ -47,8 +47,8 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
     context.messages = base_messages_to_dict_messages(agent.messages)
     Context.save_context(context)
 
-    # check if there are ui updates
-    if (context_dict.get("ui_updates")):
-        response.events = context_dict["ui_updates"]
+    # check if there are chat events
+    if (context_dict.get("events")):
+        response.events = context_dict["events"]
     
     return response
