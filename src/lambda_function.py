@@ -32,6 +32,13 @@ from RequestHandlers.Agent.DeleteAgentHandler import delete_agent_handler
 # Chat
 from RequestHandlers.Chat.ChatHandler import chat_handler
 
+# Chatpage
+from RequestHandlers.ChatPage.CreateChatPageHandler import create_chat_page_handler
+from RequestHandlers.ChatPage.GetChatPageHandler import get_chat_page_handler
+from RequestHandlers.ChatPage.UpdateChatPageHandler import update_chat_page_handler
+from RequestHandlers.ChatPage.DeleteChatPageHandler import delete_chat_page_handler
+from RequestHandlers.ChatPage.GetChatPagesHandler import get_chat_pages_handler
+
 # Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -109,6 +116,32 @@ handler_registry = {
         "POST": {
             "handler": chat_handler,
             "public": True
+        }
+    },
+    "/chat-page": {
+        "POST": {
+            "handler": create_chat_page_handler,
+            "public": False
+        }
+    },
+    "/chat-page/{chat_page_id}": {
+        "POST": {
+            "handler": update_chat_page_handler,
+            "public": False
+        },
+        "GET": {
+            "handler": get_chat_page_handler,
+            "public": True
+        },
+        "DELETE": {
+            "handler": delete_chat_page_handler,
+            "public": False
+        }
+    },
+    "chat-pages": {
+        "GET": {
+            "handler": get_chat_pages_handler,
+            "public": False
         }
     }
 }
