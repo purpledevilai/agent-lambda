@@ -11,6 +11,8 @@ def create_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.
     body = Agent.CreateAgentParams(**json.loads(lambda_event.body))
     if (body.org_id == None):
         body.org_id = dbUser.organizations[0]
+    elif (body.org_id not in dbUser.organizations):
+        raise Exception("User does not have access to this organization", 403)
 
     # Create the agent
     agent = Agent.create_agent(
