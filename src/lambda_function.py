@@ -138,12 +138,12 @@ handler_registry = {
             "public": False
         }
     },
-    "chat-pages": {
+    "/chat-pages": {
         "GET": {
             "handler": get_chat_pages_handler,
             "public": False
         }
-    }
+    },
 }
 
 def match_route(request_path: str, method: str, handler_registry: dict) -> tuple:

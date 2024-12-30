@@ -80,6 +80,8 @@ def chat_page_exists(chat_page_id: str) -> bool:
 def create_chat_page(create_chat_page: CreateChatPageParams) -> ChatPage:
     chat_page_data = {
         CHAT_PAGES_PRIMARY_KEY: str(uuid.uuid4()),
+        "created_at": int(datetime.timestamp(datetime.now())),
+        "updated_at": int(datetime.timestamp(datetime.now()))
     }
     chat_page_data.update(create_chat_page.model_dump())
     chat_page = ChatPage(**chat_page_data)
