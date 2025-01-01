@@ -1,5 +1,3 @@
-# Test the CRUD functions of the all the chat page handlers, mimicing how the other tests are set up, like the test_agent.py file
-
 import json
 import unittest
 import sys
@@ -16,7 +14,6 @@ class TestChatPage(unittest.TestCase):
     # Helper variables
     chat_page_style = {
         "background_color": "#FFFFFF",
-        "text_color": "#000000",
         "heading_color": "#000000",
         "description_color": "#000000",
         "button_background_color": "#000000",

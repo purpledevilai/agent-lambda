@@ -14,7 +14,6 @@ CHAT_PAGES_PRIMARY_KEY = os.environ["CHAT_PAGES_PRIMARY_KEY"]
 
 class ChatPageStyle(BaseModel):
     background_color: str
-    text_color: str
     heading_color: str
     description_color: str
     button_background_color: str
