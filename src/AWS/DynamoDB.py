@@ -43,15 +43,3 @@ def get_all_items_by_index(table_name: str, index_key: str, key_value: str) -> l
         KeyConditionExpression=Key(index_key).eq(key_value)
     )
     return response['Items']
-
-def delete_all_items_by_index(table_name: str, index_key: str, key: str) -> None:
-    """
-    Delete all items by an index, assuming the index name matches the index key.
-
-    :param table_name: Name of the DynamoDB table
-    :param index_key: The key for the GSI and also the index name
-    :param key: Value of the key to query
-    """
-    items = get_all_items_by_index(table_name, index_key, key)
-    for item in items:
-        delete_item(table_name, index_key, item[index_key])

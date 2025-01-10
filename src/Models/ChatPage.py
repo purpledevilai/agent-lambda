@@ -113,4 +113,9 @@ def get_chat_pages_in_org(org_id: str) -> list[ChatPage]:
     items = get_all_items_by_index(CHAT_PAGES_TABLE_NAME, "org_id", org_id)
     return parse_chat_page_items(items)
 
+def delete_all_chat_pages_for_org(org_id: str) -> None:
+    chat_pages = get_chat_pages_in_org(org_id)
+    for chat_page in chat_pages:
+        delete_chat_page(chat_page.chat_page_id)
+
 

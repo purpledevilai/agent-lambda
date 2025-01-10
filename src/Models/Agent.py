@@ -129,4 +129,9 @@ def transform_to_history_agent(agent: Agent) -> HistoryAgent:
         agent_description=agent.agent_description
    )
 
+def delete_agents_in_org(org_id: str) -> None:
+    agents = get_agents_in_org(org_id)
+    for agent in agents:
+        delete_agent(agent.agent_id)
+
 

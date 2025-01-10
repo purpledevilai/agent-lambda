@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import uuid
-from AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item, delete_all_items_by_index
+from AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item
 from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -103,7 +103,9 @@ def delete_context(context_id: str) -> None:
     delete_item(CONTEXTS_TABLE_NAME, CONTEXTS_PRIMARY_KEY, context_id)
 
 def delete_all_contexts_for_user(user_id: str) -> None:
-    delete_all_items_by_index(CONTEXTS_TABLE_NAME, "user_id", user_id)
+    contexts = get_contexts_by_user_id(user_id)
+    for context in contexts:
+        delete_context(context.context_id)
 
 def transform_to_filtered_context(context: Context) -> FilteredContext:
     messages = []
@@ -132,6 +134,7 @@ def transform_to_history_context(context: Context, agent: Agent.Agent) -> Histor
         "updated_at": context.updated_at,
         "agent": Agent.transform_to_history_agent(agent)
     })
+
 
     
 

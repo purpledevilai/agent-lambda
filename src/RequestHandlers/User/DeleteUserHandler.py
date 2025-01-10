@@ -1,9 +1,7 @@
 from AWS.Lambda import LambdaEvent
 from AWS import Cognito
 from Models.SuccessResponse import SuccessResponse
-from Models import User
-from Models import Context
-from Models import Organization
+from Models import User, Agent, Context, Organization, ChatPage
 
 def delete_user_handler(lambda_event: LambdaEvent, user: Cognito.CognitoUser) -> User.User:
     # Get the user
@@ -17,6 +15,8 @@ def delete_user_handler(lambda_event: LambdaEvent, user: Cognito.CognitoUser) ->
         organization: Organization = Organization.remove_user_from_organization(org_id, user.user_id)
         if len(organization.users) == 0:
             # If they were the only user in the org, delete the org
+            Agent.delete_agents_in_org(org_id)
+            ChatPage.delete_all_chat_pages_for_org(org_id)
             Organization.delete_organization(org_id)
 
     # Detete the user
