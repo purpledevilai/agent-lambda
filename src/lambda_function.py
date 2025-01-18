@@ -39,6 +39,9 @@ from RequestHandlers.ChatPage.UpdateChatPageHandler import update_chat_page_hand
 from RequestHandlers.ChatPage.DeleteChatPageHandler import delete_chat_page_handler
 from RequestHandlers.ChatPage.GetChatPagesHandler import get_chat_pages_handler
 
+# Scrape Page
+from RequestHandlers.ScrapePage.ScrapePageHandler import scrape_page_handler
+
 # Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -144,12 +147,22 @@ handler_registry = {
             "public": False
         }
     },
+    "/scrape-page/{link}": {
+        "GET": {
+            "handler": scrape_page_handler,
+            "public": False
+        }
+    }
 }
 
 def match_route(request_path: str, method: str, handler_registry: dict) -> tuple:
     for route, methods in handler_registry.items():
         # Replace placeholder variables with regex capture groups
-        route_pattern = re.sub(r'\{(\w+)\}', r'(?P<\1>[^/]+)', route)
+        route_pattern = re.sub(
+            r'\{(\w+)\}', 
+            lambda m: rf'(?P<{m.group(1)}>.+)' if m.group(1) == 'link' else rf'(?P<{m.group(1)}>[^/]+)', 
+            route
+        )
         route_regex = f"^{route_pattern}$"
         match = re.match(route_regex, request_path)
         
