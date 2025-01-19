@@ -42,6 +42,10 @@ from RequestHandlers.ChatPage.GetChatPagesHandler import get_chat_pages_handler
 # Scrape Page
 from RequestHandlers.ScrapePage.ScrapePageHandler import scrape_page_handler
 
+# Job
+from RequestHandlers.Job.GetJobHandler import get_job_handler
+
+
 # Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -150,6 +154,12 @@ handler_registry = {
     "/scrape-page/{link}": {
         "GET": {
             "handler": scrape_page_handler,
+            "public": False
+        }
+    },
+    "/job/{job_id}": {
+        "GET": {
+            "handler": get_job_handler,
             "public": False
         }
     }
