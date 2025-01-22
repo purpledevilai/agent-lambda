@@ -45,6 +45,9 @@ from RequestHandlers.ScrapePage.ScrapePageHandler import scrape_page_handler
 # Job
 from RequestHandlers.Job.GetJobHandler import get_job_handler
 
+# Create Team
+from RequestHandlers.CreateTeam.CreateTeamHandler import create_team_handler
+
 
 # Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
@@ -160,6 +163,12 @@ handler_registry = {
     "/job/{job_id}": {
         "GET": {
             "handler": get_job_handler,
+            "public": False
+        }
+    },
+    "/create-team": {
+        "POST": {
+            "handler": create_team_handler,
             "public": False
         }
     }

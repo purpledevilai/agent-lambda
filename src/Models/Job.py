@@ -4,14 +4,21 @@ import uuid
 from AWS.DynamoDB import get_item, put_item, delete_item, get_all_items_by_index
 from pydantic import BaseModel
 from typing import Optional
+from enum import Enum
 
 JOBS_TABLE_NAME = os.environ["JOBS_TABLE_NAME"]
 JOBS_PRIMARY_KEY = os.environ["JOBS_PRIMARY_KEY"]
 
+class JobStatus(str, Enum):
+    queued = "queued"
+    in_progress = "in_progress"
+    error = "error"
+    completed = "completed"
+
 class Job(BaseModel):
     job_id: str
     owner_id: str
-    status: str
+    status: JobStatus
     message: Optional[str] = None
     data: dict
     created_at: int
@@ -23,7 +30,7 @@ def job_exists(job_id: str) -> bool:
 
 def create_job(
         owner_id: str,
-        status: str = "queued",
+        status: str = JobStatus.queued,
         message: str = None,
         data: dict = {}
     ) -> Job:
@@ -39,7 +46,7 @@ def create_job(
         created_at=created_at,
         updated_at=updated_at
     )
-    put_item(JOBS_TABLE_NAME, job.dict())
+    put_item(JOBS_TABLE_NAME, job.model_dump())
     return job
 
 def get_job(job_id: str) -> Job:
