@@ -260,3 +260,30 @@ class TestContext(unittest.TestCase):
         # Clean up
         Context.delete_context(res_body["context_id"])
         Agent.delete_agent(agent.agent_id)
+
+    def test_create_context_with_prompt_args_and_agent_speaks_first_with_no_params(self):
+
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent("aj", "agent with prompt args", "Say hello to {name}", user.organizations[0], False, True)
+
+        create_context_body = {
+            "agent_id": agent.agent_id,
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={
+                "Authorization": access_token
+            },
+            body=create_context_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)

@@ -22,6 +22,8 @@ class AgentChat:
     self.context = context
     if context.get("prompt_args") and context["prompt_args"]:
       prompt = prompt.format(**context["prompt_args"])
+    else:
+      prompt = prompt.replace("{", "{{").replace("}", "}}")
     chat_prompt_template = ChatPromptTemplate.from_messages([
         ("system", prompt),
         (MessagesPlaceholder(variable_name="messages"))
