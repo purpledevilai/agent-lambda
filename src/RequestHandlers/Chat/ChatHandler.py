@@ -29,22 +29,22 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
     context_dict = context.model_dump()
 
     # Create the agent chat
-    agent = AgentChat(
+    agent_chat = AgentChat(
         create_llm(),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
-        tools=[tool_registry[tool] for tool in agent.tools] if agent.tools else [],
+        tools=[tool_registry[tool.name] for tool in agent.tools] if agent.tools else [],
         context=context_dict
     )
 
     # Add the human message and invoke the agent
-    agent_response = agent.add_human_message_and_invoke(body.message)
+    agent_response = agent_chat.add_human_message_and_invoke(body.message)
 
     # Initialize the response
     response = Chat.ChatResponse(response=agent_response)
 
     # Save the new message to context
-    context.messages = base_messages_to_dict_messages(agent.messages)
+    context.messages = base_messages_to_dict_messages(agent_chat.messages)
     Context.save_context(context)
 
     # check if there are chat events

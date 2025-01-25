@@ -12,6 +12,10 @@ logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 AGENTS_TABLE_NAME = os.environ["AGENTS_TABLE_NAME"]
 AGENTS_PRIMARY_KEY = os.environ["AGENTS_PRIMARY_KEY"]
 
+class AgentToolInstance(BaseModel):
+    name: str
+    config: Optional[dict] = {}
+
 class Agent(BaseModel):
     agent_id: str
     agent_name: str
@@ -21,7 +25,7 @@ class Agent(BaseModel):
     is_public: bool
     is_default_agent: bool
     agent_speaks_first: bool = False
-    tools: Optional[list[str]] = []
+    tools: Optional[list[AgentToolInstance]] = []
     created_at: int
     updated_at: int
 
@@ -57,7 +61,7 @@ def create_agent(
         org_id: str,
         is_public: bool,
         agent_speaks_first: bool,
-        tools: Optional[list[str]] = [],
+        tools: Optional[list[dict]] = [],
     ) -> Agent:
     agentData = {
         AGENTS_PRIMARY_KEY: str(uuid.uuid4()),
