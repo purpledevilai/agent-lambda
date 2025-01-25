@@ -240,6 +240,177 @@ class TestAgent(unittest.TestCase):
         # Check if agent is deleted
         self.assertFalse(Agent.agent_exists(agent.agent_id))
 
+    def test_create_agent_with_tools(self):
+        
+        # Create org data
+        create_agent_body = {
+            "agent_name": "Test Agent",
+            "agent_description": "Test Description",
+            "prompt": "Test Prompt",
+            "is_public": False,
+            "agent_speaks_first": False,
+            "tools": [
+                {
+                    "name": "pass_event"
+                },
+            ]
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/agent",
+            headers={
+                "Authorization": access_token
+            },
+            body=create_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+
+        # Check for name
+        self.assertEqual(res_body["tools"][0]["name"], create_agent_body["tools"][0]["name"])
+
+        # Clean up
+        Agent.delete_agent(res_body["agent_id"])
+
+    def test_create_agent_with_invalid_tool(self):
+        
+        # Create org data
+        create_agent_body = {
+            "agent_name": "Test Agent",
+            "agent_description": "Test Description",
+            "prompt": "Test Prompt",
+            "is_public": False,
+            "agent_speaks_first": False,
+            "tools": [
+                {
+                    "name": "invalid_tool"
+                },
+            ]
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/agent",
+            headers={
+                "Authorization": access_token
+            },
+            body=create_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 400)
+
+    def test_update_agent_tools(self):
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent: Agent.Agent = Agent.create_agent(
+            agent_name="Test Agent",
+            agent_description="Test Description",
+            prompt="Test Prompt",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[
+                {
+                    "name": "pass_event"
+                },
+            ]
+        )
+
+        # Create update data
+        update_agent_body = {
+            "tools": [
+                {
+                    "name": "set-prompt"
+                },
+            ]
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path=f"/agent/{agent.agent_id}",
+            headers={
+                "Authorization": access_token
+            },
+            body=update_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+
+        # Check for tools
+        self.assertEqual(res_body["tools"][0]["name"], update_agent_body["tools"][0]["name"])
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+
+    def test_update_agent_with_invalid_tool(self):
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent: Agent.Agent = Agent.create_agent(
+            agent_name="Test Agent",
+            agent_description="Test Description",
+            prompt="Test Prompt",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[
+                {
+                    "name": "pass_event"
+                },
+            ]
+        )
+
+        # Create update data
+        update_agent_body = {
+            "tools": [
+                {
+                    "name": "invalid_tool"
+                },
+            ]
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path=f"/agent/{agent.agent_id}",
+            headers={
+                "Authorization": access_token
+            },
+            body=update_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 400)
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+
     
 
     

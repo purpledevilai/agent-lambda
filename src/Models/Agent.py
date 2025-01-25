@@ -6,6 +6,7 @@ from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel
 from typing import Optional
 from Models import User
+from Tools import ToolRegistry
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -41,7 +42,7 @@ class CreateAgentParams(BaseModel):
     org_id: Optional[str] = None
     is_public: bool
     agent_speaks_first: bool
-    tools: Optional[list[str]] = []
+    tools: Optional[list[dict]] = []
 
 class UpdateAgentParams(BaseModel):
     agent_name: Optional[str] = None
@@ -49,10 +50,15 @@ class UpdateAgentParams(BaseModel):
     prompt: Optional[str] = None
     is_public: Optional[bool] = None
     agent_speaks_first: Optional[bool] = None
-    tools: Optional[list[str]] = None
+    tools: Optional[list[dict]] = None
 
 def agent_exists(agent_id: str) -> bool:
     return get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id) != None
+
+def validate_tools(tools: list[AgentToolInstance]) -> None:
+    for tool in tools:
+        if tool.name not in ToolRegistry.tool_registry:
+            raise Exception(f"Tool {tool.name} is not registered", 400)
     
 def create_agent(
         agent_name: str,
@@ -77,6 +83,7 @@ def create_agent(
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
     agent = Agent(**agentData)
+    validate_tools(agent.tools)
     put_item(AGENTS_TABLE_NAME, agentData)
     return agent
 
@@ -87,6 +94,7 @@ def get_agent(agent_id: str) -> Agent:
     return Agent(**item)
 
 def save_agent(agent: Agent) -> None:
+    validate_tools(agent.tools)
     agent.updated_at = int(datetime.timestamp(datetime.now()))
     put_item(AGENTS_TABLE_NAME, agent.model_dump())
 
