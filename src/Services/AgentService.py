@@ -9,7 +9,7 @@ def invoke_context(context: Context.Context, agent: Agent.Agent) -> Context.Cont
         create_llm(),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
-        tools=[tool_registry[tool] for tool in agent.tools] if agent.tools else [],
+        tools=[tool_registry[tool.name] for tool in agent.tools] if agent.tools else [],
         context=context.model_dump()
     )
     agentChat.invoke()
