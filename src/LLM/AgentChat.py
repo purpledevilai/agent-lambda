@@ -21,6 +21,8 @@ class AgentChat:
     self.messages = messages
     self.context = context
     if context.get("prompt_args") and context["prompt_args"]:
+      for key in context["prompt_args"].keys():
+        context["prompt_args"][key] = context["prompt_args"][key].replace("{", "{{").replace("}", "}}")
       prompt = prompt.format(**context["prompt_args"])
     else:
       prompt = prompt.replace("{", "{{").replace("}", "}}")

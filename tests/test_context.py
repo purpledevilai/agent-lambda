@@ -326,3 +326,52 @@ class TestContext(unittest.TestCase):
         res_body = json.loads(result["body"])
         Context.delete_context(res_body["context_id"])
         Agent.delete_agent(agent.agent_id)
+
+    def test_create_context_with_agent_params_and_json_in_the_params(self): 
+
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        prompt = "Describe what the following code does \n{code}"
+        agent = Agent.create_agent(
+            agent_name="test-agent",
+            agent_description="test agent",
+            prompt=prompt,
+            org_id=user.organizations[0],
+            agent_speaks_first=True,
+            is_public=False
+        )
+
+        # body
+        body = {
+            "agent_id": agent.agent_id,
+            "prompt_args": {
+                "code": """
+const sayHello(name: string) {
+    print(`Hello, ${name}`)
+}
+"""
+            }
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={
+                "Authorization": access_token
+            },
+            body=body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        # Clean up 
+        res_body = json.loads(result["body"])
+        Context.delete_context(res_body["context_id"])
+        Agent.delete_agent(agent.agent_id)
+
