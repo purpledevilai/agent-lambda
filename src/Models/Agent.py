@@ -27,6 +27,7 @@ class Agent(BaseModel):
     is_default_agent: bool
     agent_speaks_first: bool = False
     tools: Optional[list[AgentToolInstance]] = []
+    uses_prompt_args: Optional[bool] = False
     created_at: int
     updated_at: int
 
@@ -43,6 +44,7 @@ class CreateAgentParams(BaseModel):
     is_public: bool
     agent_speaks_first: bool
     tools: Optional[list[dict]] = []
+    uses_prompt_args: Optional[bool] = False
 
 class UpdateAgentParams(BaseModel):
     agent_name: Optional[str] = None
@@ -51,6 +53,7 @@ class UpdateAgentParams(BaseModel):
     is_public: Optional[bool] = None
     agent_speaks_first: Optional[bool] = None
     tools: Optional[list[dict]] = None
+    uses_prompt_args: Optional[bool] = None
 
 def agent_exists(agent_id: str) -> bool:
     return get_item(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_id) != None
@@ -68,6 +71,7 @@ def create_agent(
         is_public: bool,
         agent_speaks_first: bool,
         tools: Optional[list[dict]] = [],
+        uses_prompt_args: Optional[bool] = False
     ) -> Agent:
     agentData = {
         AGENTS_PRIMARY_KEY: str(uuid.uuid4()),
@@ -79,6 +83,7 @@ def create_agent(
         "agent_speaks_first": agent_speaks_first,
         "is_default_agent": False,
         "tools": tools,
+        "uses_prompt_args": uses_prompt_args,
         "created_at": int(datetime.timestamp(datetime.now())),
         "updated_at": int(datetime.timestamp(datetime.now())),
     }

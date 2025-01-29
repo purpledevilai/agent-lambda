@@ -22,7 +22,8 @@ def create_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.
         org_id=body.org_id,
         is_public=body.is_public,
         agent_speaks_first=body.agent_speaks_first,
-        tools=body.tools
+        tools=body.tools,
+        uses_prompt_args= True if body.uses_prompt_args else False
     )
 
     return agent

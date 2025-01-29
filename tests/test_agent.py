@@ -411,6 +411,59 @@ class TestAgent(unittest.TestCase):
         # Clean up
         Agent.delete_agent(agent.agent_id)
 
+    def test_get_existing_agent_without_uses_prompt_args(self):
+
+        # Create request
+        request = create_request(
+            method="GET",
+            path=f"/agent/aj-public"
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+        print(res_body)
+
+    def test_create_agent_with_uses_prompt_args(self):
+        
+        # Create org data
+        create_agent_body = {
+            "agent_name": "Test Agent",
+            "agent_description": "Test Description",
+            "prompt": "Test Prompt for {name}",
+            "is_public": False,
+            "agent_speaks_first": False,
+            "uses_prompt_args": True
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/agent",
+            headers={
+                "Authorization": access_token
+            },
+            body=create_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+
+        # Check for name
+        self.assertEqual(res_body["uses_prompt_args"], create_agent_body["uses_prompt_args"])
+
+        # Clean up
+        Agent.delete_agent(res_body["agent_id"])
+
     
 
     
