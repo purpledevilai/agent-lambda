@@ -13,11 +13,11 @@ class APIGatewayResponse(TypedDict):
     headers: dict
     body: str
 
-def create_api_gateway_response(status_code, body) -> APIGatewayResponse:
+def create_api_gateway_response(status_code, body, return_type) -> APIGatewayResponse:
     return {
         "statusCode": status_code,
         "headers": {
-            "Content-Type": "application/json",
+            "Content-Type": return_type,
             "Access-Control-Allow-Origin": "*",  # Allow requests from any origin
             "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",  # Allow these headers
             "Access-Control-Allow-Methods": "OPTIONS,POST,GET"  # Allow specific methods

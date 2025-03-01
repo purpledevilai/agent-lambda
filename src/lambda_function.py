@@ -39,6 +39,9 @@ from RequestHandlers.ChatPage.UpdateChatPageHandler import update_chat_page_hand
 from RequestHandlers.ChatPage.DeleteChatPageHandler import delete_chat_page_handler
 from RequestHandlers.ChatPage.GetChatPagesHandler import get_chat_pages_handler
 
+# Chat Bot
+from RequestHandlers.ChatBot.GetChatBotHandler import get_chat_bot_handler
+
 # Scrape Page
 from RequestHandlers.ScrapePage.ScrapePageHandler import scrape_page_handler
 
@@ -171,6 +174,13 @@ handler_registry = {
             "handler": create_team_handler,
             "public": False
         }
+    },
+    "/chat-bot/{chat_page_id}": {
+        "GET": {
+            "handler": get_chat_bot_handler,
+            "public": True,
+            "return_type": "application/javascript"
+        }
     }
 }
 
@@ -192,9 +202,10 @@ def match_route(request_path: str, method: str, handler_registry: dict) -> tuple
                 params = match.groupdict()
                 handler = handler_info.get('handler')
                 is_public = handler_info.get('public', False)  # Default to False if 'public' key is missing
-                return handler, params, is_public
+                return_type = handler_info.get('return_type', 'application/json')  # Default to 'json' if 'return_type' key is missing
+                return handler, params, is_public, return_type
     
-    return None, None, None
+    return None, None, None, None
 
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
@@ -210,7 +221,7 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
         request_method: str = lambda_event.httpMethod
 
         # Get the handler for the request
-        handler, request_params, is_public = match_route(request_path, request_method, handler_registry)
+        handler, request_params, is_public, return_type = match_route(request_path, request_method, handler_registry)
         if not handler:
             raise Exception("Invalid request path", 404)
         lambda_event.requestParameters = request_params
@@ -235,7 +246,7 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
         )
 
         # Return the response 
-        return create_api_gateway_response(200, response.model_dump())
+        return create_api_gateway_response(200, response.model_dump() if return_type == 'application/json' else response, return_type)
             
 
     # Return any errors   
@@ -244,4 +255,4 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
         error, code = e.args if len(e.args) == 2 else (e, 500)
         return create_api_gateway_response(code, {
             'error': str(error)
-        })
+        }, 'application/json')
