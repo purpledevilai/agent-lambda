@@ -2,7 +2,7 @@ from typing import Optional
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import ChatPage, Agent, User
-from src.RequestHandlers.ChatBot.ChatBotJsTemplate import chat_bot_js_template
+from RequestHandlers.ChatBot.ChatBotJsTemplate import chat_bot_js_template
 
 def get_chat_bot_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> str:
     # Get the path parameters
