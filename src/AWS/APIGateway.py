@@ -22,5 +22,5 @@ def create_api_gateway_response(status_code, body, return_type) -> APIGatewayRes
             "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",  # Allow these headers
             "Access-Control-Allow-Methods": "OPTIONS,POST,GET"  # Allow specific methods
         },
-        "body": json.dumps(body, default=default_type_error_handler)
+        "body": json.dumps(body, default=default_type_error_handler) if return_type == 'application/json' else body
     }
