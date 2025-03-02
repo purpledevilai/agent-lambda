@@ -33,14 +33,14 @@ def get_chat_bot_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser])
         header_title=chat_page.heading,
         chat_button_title="💬 Chat",
         primary_color=chat_page.chat_page_style.background_color,
-        bot_message_color=chat_page.chat_box_style.ai_message_background_color,
-        bot_text_color=chat_page.chat_box_style.ai_message_text_color,
-        user_message_color=chat_page.chat_box_style.user_message_background_color,
-        user_text_color=chat_page.chat_box_style.user_message_text_color,
-        chat_background_color=chat_page.chat_box_style.background_color,
-        chat_border_color=chat_page.chat_box_style.border_color,
-        input_text_color=chat_page.chat_box_style.user_input_textarea_text_color,
-        input_background_color=chat_page.chat_box_style.user_input_background_color
+        bot_message_color="#d3d3d3",
+        bot_text_color="#3c3c3c",
+        user_message_color=chat_page.chat_page_style.background_color,
+        user_text_color=chat_page.chat_page_style.heading_color,
+        chat_background_color="white",
+        chat_border_color="rgba(0,0,0,0.2)",
+        input_text_color="black",
+        input_background_color="white"
     )
 
     return chat_bot_js
