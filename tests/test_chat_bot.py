@@ -86,9 +86,7 @@ class TestChatBot(unittest.TestCase):
         # Check the response
         self.assertEqual(result["statusCode"], 200)
 
-        res_body = json.loads(result["body"])
-
-        print(res_body)
+        print(result["body"])
         
         # Clean up
         ChatPage.delete_chat_page(chat_page.chat_page_id)

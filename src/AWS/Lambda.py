@@ -11,11 +11,12 @@ class LambdaEvent(BaseModel):
     headers: Optional[dict] = {}
     body: Optional[str] = None
 
-def invoke_lambda(lambda_name: str, event: dict) -> None:
+def invoke_lambda(lambda_name: str, event: dict, invokation_type: str = "Event"):
     client = boto3.client('lambda')
-    client.invoke(
+    response = client.invoke(
         FunctionName=lambda_name,
-        InvocationType="Event",  # Asynchronous invocation
+        InvocationType=invokation_type,
         Payload=bytes(json.dumps(event), 'utf-8')
-        
     )
+    if invokation_type == "RequestResponse":
+        return json.loads(response["Payload"].read().decode("utf-8"))

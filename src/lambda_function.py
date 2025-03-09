@@ -51,6 +51,9 @@ from RequestHandlers.Job.GetJobHandler import get_job_handler
 # Create Team
 from RequestHandlers.CreateTeam.CreateTeamHandler import create_team_handler
 
+# Tools
+from RequestHandlers.Tools.TestToolHandler import test_tool_handler
+
 
 # Set up the logger
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
@@ -180,6 +183,12 @@ handler_registry = {
             "handler": get_chat_bot_handler,
             "public": True,
             "return_type": "application/javascript"
+        }
+    },
+    "/test-tool": {
+        "POST": {
+            "handler": test_tool_handler,
+            "public": False
         }
     }
 }
