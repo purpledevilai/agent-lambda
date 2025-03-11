@@ -51,8 +51,21 @@ from RequestHandlers.Job.GetJobHandler import get_job_handler
 # Create Team
 from RequestHandlers.CreateTeam.CreateTeamHandler import create_team_handler
 
-# Tools
-from RequestHandlers.Tools.TestToolHandler import test_tool_handler
+# Parameter Definition
+from RequestHandlers.ParameterDefinition.CreateParameterDefinitionHandler import create_parameter_definition_handler
+from RequestHandlers.ParameterDefinition.GetParameterDefinitionHandler import get_parameter_definition_handler
+from RequestHandlers.ParameterDefinition.UpdateParameterDefinitionHandler import update_parameter_definition_handler
+from RequestHandlers.ParameterDefinition.DeleteParameterDefinitionHandler import delete_parameter_definition_handler
+from RequestHandlers.ParameterDefinition.GetParameterDefinitionsHandler import get_parameter_definitions_handler
+
+# Tool
+from RequestHandlers.Tool.CreateToolHandler import create_tool_handler
+from RequestHandlers.Tool.GetToolHandler import get_tool_handler
+from RequestHandlers.Tool.UpdateToolHandler import update_tool_handler
+from RequestHandlers.Tool.DeleteToolHandler import delete_tool_handler
+from RequestHandlers.Tool.GetToolsHandler import get_tools_handler
+from RequestHandlers.Tool.TestToolHandler import test_tool_handler
+
 
 
 # Set up the logger
@@ -183,6 +196,58 @@ handler_registry = {
             "handler": get_chat_bot_handler,
             "public": True,
             "return_type": "application/javascript"
+        }
+    },
+    "/parameter-definition": {
+        "POST": {
+            "handler": create_parameter_definition_handler,
+            "public": False
+        }
+    },
+    "/parameter-definition/{pd_id}": {
+        "GET": {
+            "handler": get_parameter_definition_handler,
+            "public": False
+        },
+        "POST": {
+            "handler": update_parameter_definition_handler,
+            "public": False
+        },
+        "DELETE": {
+            "handler": delete_parameter_definition_handler,
+            "public": False
+        }
+    },
+    "/parameter-definitions": {
+        "GET": {
+            "handler": get_parameter_definitions_handler,
+            "public": False
+        }
+    },
+    "/tool": {
+        "POST": {
+            "handler": create_tool_handler,
+            "public": False
+        }
+    },
+    "/tool/{tool_id}": {
+        "GET": {
+            "handler": get_tool_handler,
+            "public": False
+        },
+        "POST": {
+            "handler": update_tool_handler,
+            "public": False
+        },
+        "DELETE": {
+            "handler": delete_tool_handler,
+            "public": False
+        }
+    },
+    "/tools": {
+        "GET": {
+            "handler": get_tools_handler,
+            "public": False
         }
     },
     "/test-tool": {

@@ -6,9 +6,335 @@ import unittest
 import sys
 sys.path.append("../")
 # Import for test
+from src.AWS import Cognito
+from src.Models import Tool, ParameterDefinition, User
 
 
 class TestTool(unittest.TestCase):
+
+    def test_create_tool(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        parameter_definition = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "test_string",
+                    "description": "test",
+                    "type": "string",
+                }
+            ]
+        )
+
+        # Create the request
+        request = create_request(
+            method="POST",
+            path="/tool",
+            headers={
+                "Authorization": access_token
+            },
+            body={
+                "name": "Test Tool",
+                "description": "Test",
+                "pd_id": f"{parameter_definition.pd_id}",
+                "code": "def test():\n  return 'test'",
+            }
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        # parse result
+        result = json.loads(result["body"])
+
+        self.assertEqual(result["name"], "Test Tool")
+
+        # Clean up
+        Tool.delete_tool(result["tool_id"])
+        ParameterDefinition.delete_parameter_definition(parameter_definition.pd_id)
+
+    def test_create_tool_no_pd_id(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create the request
+        request = create_request(
+            method="POST",
+            path="/tool",
+            headers={
+                "Authorization": access_token
+            },
+            body={
+                "name": "Test Tool",
+                "description": "Test",
+                "code": "def test():\n  return 'test'",
+            }
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        # parse result
+        result = json.loads(result["body"])
+
+        self.assertEqual(result["name"], "Test Tool")
+        self.assertIsNone(result["pd_id"])
+
+        # Clean up
+        Tool.delete_tool(result["tool_id"])
+
+    def test_read_tool(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        parameter_definition = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "test_string",
+                    "description": "test",
+                    "type": "string",
+                }
+            ]
+        )
+
+        # Create the tool
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="Test Tool",
+            description="Test",
+            pd_id=parameter_definition.pd_id,
+            code="def test():\n  return 'test'"
+        )
+
+        # Create the request
+        request = create_request(
+            method="GET",
+            path=f"/tool/{tool.tool_id}",
+            headers={
+                "Authorization": access_token
+            },
+        )
+
+        # Call the lambda handler
+        response = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(response["statusCode"], 200)
+        body = json.loads(response["body"])
+
+        # Check the response body
+        self.assertEqual(body["tool_id"], tool.tool_id)
+
+        # Clean up
+        Tool.delete_tool(tool.tool_id)
+        ParameterDefinition.delete_parameter_definition(parameter_definition.pd_id)
+
+    def test_update_tool(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        parameter_definition = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "test_string",
+                    "description": "test",
+                    "type": "string",
+                }
+            ]
+        )
+
+        # Create the tool
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="Test Tool",
+            description="Test",
+            pd_id=parameter_definition.pd_id,
+            code="def test():\n  return 'test'"
+        )
+
+        # Create the request
+        request = create_request(
+            method="POST",
+            path=f"/tool/{tool.tool_id}",
+            headers={
+                "Authorization": access_token
+            },
+            body={
+                "name": "Updated Tool",
+                "description": "Updated",
+                "pd_id": f"{parameter_definition.pd_id}",
+                "code": "def test():\n  return 'updated'",
+            }
+        )
+
+        # Call the lambda handler
+        response = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(response["statusCode"], 200)
+        body = json.loads(response["body"])
+
+        # Check the response body
+        self.assertEqual(body["name"], "Updated Tool")
+
+        # Clean up
+        Tool.delete_tool(tool.tool_id)
+        ParameterDefinition.delete_parameter_definition(parameter_definition.pd_id)
+
+    def test_update_tool_no_pd_id(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        parameter_definition = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "test_string",
+                    "description": "test",
+                    "type": "string",
+                }
+            ]
+        )
+
+        # Create the tool
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="Test Tool",
+            description="Test",
+            pd_id=parameter_definition.pd_id,
+            code="def test():\n  return 'test'"
+        )
+
+        # Create the request
+        request = create_request(
+            method="POST",
+            path=f"/tool/{tool.tool_id}",
+            headers={
+                "Authorization": access_token
+            },
+            body={
+                "name": "Updated Tool",
+                "description": "Updated",
+                "code": "def test():\n  return 'updated'",
+            }
+        )
+
+        # Call the lambda handler
+        response = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(response["statusCode"], 200)
+        body = json.loads(response["body"])
+
+        # Check the response body
+        self.assertIsNone(body["pd_id"])
+
+        # Clean up
+        Tool.delete_tool(tool.tool_id)
+        ParameterDefinition.delete_parameter_definition(parameter_definition.pd_id)
+
+    def test_delete_tool(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        parameter_definition = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "test_string",
+                    "description": "test",
+                    "type": "string",
+                }
+            ]
+        )
+
+        # Create the tool
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="Test Tool",
+            description="Test",
+            pd_id=parameter_definition.pd_id,
+            code="def test():\n  return 'test'"
+        )
+
+        # Create the request
+        request = create_request(
+            method="DELETE",
+            path=f"/tool/{tool.tool_id}",
+            headers={
+                "Authorization": access_token
+            },
+        )
+
+        # Call the lambda handler
+        response = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(response["statusCode"], 200)
+
+        # Check the tool is deleted
+        self.assertFalse(Tool.tool_exists(tool.tool_id))
+
+        # Clean up
+        ParameterDefinition.delete_parameter_definition(parameter_definition.pd_id)
+
+    def test_list_tools(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        parameter_definition = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "test_string",
+                    "description": "test",
+                    "type": "string",
+                }
+            ]
+        )
+
+        # Create the tool
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="Test Tool",
+            description="Test",
+            pd_id=parameter_definition.pd_id,
+            code="def test():\n  return 'test'"
+        )
+
+        # Create the request
+        request = create_request(
+            method="GET",
+            path="/tools",
+            headers={
+                "Authorization": access_token
+            },
+        )
+
+        # Call the lambda handler
+        response = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(response["statusCode"], 200)
+        body = json.loads(response["body"])
+
+        # Check the response body
+        self.assertTrue(len(body) > 0)
+
+        # Clean up
+        Tool.delete_tool(tool.tool_id)
+        ParameterDefinition.delete_parameter_definition(parameter_definition.pd_id)
+
 
     def test_test_tool(self):
 
