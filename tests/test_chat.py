@@ -80,9 +80,7 @@ class TestChat(unittest.TestCase):
             agent_description="test-agent-description",
             prompt="Call the pass_event tool with the type as 'echo' and the data as what the user said",
             tools=[
-                {
-                    "name": "pass_event",
-                }
+                "pass_event"
             ]
         )
         context = Context.create_context(

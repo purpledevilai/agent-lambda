@@ -2,6 +2,7 @@ import json
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Tool, User
+from Models import ParameterDefinition
 
 def update_tool_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Tool.Tool:   
     
@@ -18,6 +19,10 @@ def update_tool_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Tool.To
 
     # Get the tool
     tool = Tool.get_tool_for_user(tool_id, dbUser)
+
+    # Check that user has access to the parameter definition
+    if (body.pd_id):
+        ParameterDefinition.get_parameter_definition_for_user(body.pd_id, dbUser)
 
     # Update the tool
     update_dict = {k: v for k, v in body.model_dump().items() if v is not None}

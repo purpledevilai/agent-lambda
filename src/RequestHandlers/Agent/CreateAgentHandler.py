@@ -1,7 +1,7 @@
 import json
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
-from Models import Agent, User
+from Models import Agent, User, Tool
 
 def create_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.Agent:   
     
@@ -13,6 +13,9 @@ def create_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.
         body.org_id = dbUser.organizations[0]
     elif (body.org_id not in dbUser.organizations):
         raise Exception("User does not have access to this organization", 403)
+
+    if (body.tools):
+        Tool.validate_tools_for_user(body.tools, dbUser)
 
     # Create the agent
     agent = Agent.create_agent(

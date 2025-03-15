@@ -3,8 +3,8 @@ from LLM.AgentChat import AgentTool
 
 # This name must match what you are referencing in the prompt
 class pass_event(BaseModel):
-  type: str = Field(description="The draft or version of the prompt")
-  data: str = Field(description="The draft or version of the prompt")
+  type: str = Field(description="String representing the type of event")
+  data: str = Field(description="The data to be passed with the event")
 
 # Function params must match base model params
 def pass_event_func(type: str, data: str, context: dict) -> str:

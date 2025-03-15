@@ -2,8 +2,7 @@ import json
 from typing import Optional
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
-from Models import Agent, User, Context, Chat
-from Tools.ToolRegistry import tool_registry
+from Models import Agent, User, Context, Chat, Tool
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
@@ -33,7 +32,7 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         create_llm(),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
-        tools=[tool_registry[tool.name] for tool in agent.tools] if agent.tools else [],
+        tools=[Tool.get_agent_tool_with_id(tool) for tool in agent.tools] if agent.tools else [],
         context=context_dict
     )
 

@@ -300,7 +300,7 @@ class TestContext(unittest.TestCase):
             org_id=user.organizations[0],
             agent_speaks_first=True,
             is_public=False,
-            tools=[{"name": "pass_event"}]
+            tools=["pass_event"]
         )
         body = {
             "agent_id": agent.agent_id

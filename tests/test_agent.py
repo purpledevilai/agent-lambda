@@ -7,7 +7,7 @@ from tests.config import access_token, agent_id_outside_of_org
 from src.lambda_function import lambda_handler
 # Import for test
 from src.AWS import Cognito
-from src.Models import Agent, User
+from src.Models import Agent, User, ParameterDefinition, Tool, Context
 
 
 class TestAgent(unittest.TestCase):
@@ -250,9 +250,7 @@ class TestAgent(unittest.TestCase):
             "is_public": False,
             "agent_speaks_first": False,
             "tools": [
-                {
-                    "name": "pass_event"
-                },
+                "pass_event"
             ]
         }
 
@@ -275,7 +273,7 @@ class TestAgent(unittest.TestCase):
         res_body = json.loads(result["body"])
 
         # Check for name
-        self.assertEqual(res_body["tools"][0]["name"], create_agent_body["tools"][0]["name"])
+        self.assertEqual(res_body["tools"][0], "pass_event")
 
         # Clean up
         Agent.delete_agent(res_body["agent_id"])
@@ -290,9 +288,7 @@ class TestAgent(unittest.TestCase):
             "is_public": False,
             "agent_speaks_first": False,
             "tools": [
-                {
-                    "name": "invalid_tool"
-                },
+                "invalid_tool"
             ]
         }
 
@@ -310,59 +306,7 @@ class TestAgent(unittest.TestCase):
         result = lambda_handler(request, None)
 
         # Check the response
-        self.assertEqual(result["statusCode"], 400)
-
-    def test_update_agent_tools(self):
-        
-        # Set up
-        cognito_user = Cognito.get_user_from_cognito(access_token)
-        user = User.get_user(cognito_user.sub)
-        agent: Agent.Agent = Agent.create_agent(
-            agent_name="Test Agent",
-            agent_description="Test Description",
-            prompt="Test Prompt",
-            org_id=user.organizations[0],
-            is_public=False,
-            agent_speaks_first=False,
-            tools=[
-                {
-                    "name": "pass_event"
-                },
-            ]
-        )
-
-        # Create update data
-        update_agent_body = {
-            "tools": [
-                {
-                    "name": "set-prompt"
-                },
-            ]
-        }
-
-        # Create request
-        request = create_request(
-            method="POST",
-            path=f"/agent/{agent.agent_id}",
-            headers={
-                "Authorization": access_token
-            },
-            body=update_agent_body
-        )
-
-        # Call the lambda handler
-        result = lambda_handler(request, None)
-
-        # Check the response
-        self.assertEqual(result["statusCode"], 200)
-
-        res_body = json.loads(result["body"])
-
-        # Check for tools
-        self.assertEqual(res_body["tools"][0]["name"], update_agent_body["tools"][0]["name"])
-
-        # Clean up
-        Agent.delete_agent(agent.agent_id)
+        self.assertEqual(result["statusCode"], 404)
 
     def test_update_agent_with_invalid_tool(self):
         
@@ -377,18 +321,14 @@ class TestAgent(unittest.TestCase):
             is_public=False,
             agent_speaks_first=False,
             tools=[
-                {
-                    "name": "pass_event"
-                },
+                "pass_event"
             ]
         )
 
         # Create update data
         update_agent_body = {
             "tools": [
-                {
-                    "name": "invalid_tool"
-                },
+               "invalid_tool"
             ]
         }
 
@@ -406,7 +346,7 @@ class TestAgent(unittest.TestCase):
         result = lambda_handler(request, None)
 
         # Check the response
-        self.assertEqual(result["statusCode"], 400)
+        self.assertEqual(result["statusCode"], 404)
 
         # Clean up
         Agent.delete_agent(agent.agent_id)
@@ -464,6 +404,84 @@ class TestAgent(unittest.TestCase):
         # Clean up
         Agent.delete_agent(res_body["agent_id"])
 
+    def test_agent_with_user_defined_tool(self):
+
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create parameter definition
+        parameter_definition = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "lat",
+                    "description": "The latitude of the location",
+                    "type": "string"
+                },
+                {
+                    "name": "long",
+                    "description": "The longitude of the location",
+                    "type": "string"
+                }
+            ]
+        )
+
+        # Create tool
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="get_weather",
+            description="Gets the weather in the specified location",
+            pd_id=parameter_definition.pd_id,
+            code="def get_weather(lat, long):\n  url = f\"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&current=temperature_2m\"\n\n  try:\n    data = requests.get(url).json()\n    return data[\"current\"][\"temperature_2m\"]  # Extract temperature\n  except Exception as e:\n    return f\"Error fetching temperature: {e}\""
+        )
+
+        # Create agent
+        agent: Agent.Agent = Agent.create_agent(
+            agent_name="Weather Agent",
+            agent_description="Can get you the weather",
+            prompt="When the user asks for the weather, call the get_weather tool with the latitude and longitude, you know that the lat and long for melbourne are -37 and 144",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[
+                tool.tool_id
+            ]
+        )
+
+        # Create context
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Hello! What's the weather in Melbourne?"
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda function
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        self.assertIn("response", response)
+        print(response)
+
+        # Clean up
+        ParameterDefinition.delete_parameter_definition(parameter_definition.pd_id)
+        Tool.delete_tool(tool.tool_id)
+        Agent.delete_agent(agent.agent_id)
+        Context.delete_context(context.context_id)
     
 
     

@@ -1,7 +1,7 @@
 import json
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
-from Models import Agent, User
+from Models import Agent, User, Tool
 
 def update_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.Agent:   
     
@@ -23,6 +23,8 @@ def update_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.
     update_dict = {k: v for k, v in body.model_dump().items() if v is not None}
     agent_dict = agent.model_dump()
     agent_dict.update(update_dict)
+    if agent_dict.get("tools"):
+        Tool.validate_tools_for_user(agent_dict["tools"], dbUser)
     update_agent = Agent.Agent(**agent_dict)
 
     Agent.save_agent(update_agent)
