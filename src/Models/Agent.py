@@ -61,7 +61,7 @@ def create_agent(
         org_id: str,
         is_public: bool,
         agent_speaks_first: bool,
-        tools: Optional[list[dict]] = [],
+        tools: Optional[list[str]] = [],
         uses_prompt_args: Optional[bool] = False
     ) -> Agent:
     agentData = {

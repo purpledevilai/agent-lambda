@@ -50,8 +50,8 @@ def create_tool(
     org_id: str,
     name: str,
     description: str,
-    pd_id: Optional[str],  # Parameter Definition ID
-    code: str
+    code: str,
+    pd_id: Optional[str] = None,  # Parameter Definition ID
 ) -> Tool:
     tool_id = str(uuid.uuid4())
     created_at = int(datetime.now().timestamp())
