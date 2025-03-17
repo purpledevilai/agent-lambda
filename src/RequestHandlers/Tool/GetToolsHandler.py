@@ -36,5 +36,9 @@ def get_tools_handler(lambda_event: LambdaEvent, user: CognitoUser):
     # Org tools
     tools = Tool.get_tools_for_org(org_id)
     if agent is not None:
-        tools = [tool for tool in tools if tool.tool_id in agent.tools]
+        # If getting tools for agent also return the default tools it uses
+        default_tools = Tool.get_tools_for_org("default")
+        agent_default_tools = [tool for tool in default_tools if tool.tool_id in agent.tools]
+        tools = [tool for tool in tools if tool.tool_id in agent.tools] + agent_default_tools
+
     return GetToolsResponse(tools=tools)

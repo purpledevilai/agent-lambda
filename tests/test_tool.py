@@ -505,3 +505,58 @@ def try_aws_access():
         Tool.delete_tool(tool.tool_id)
         Agent.delete_agent(agent.agent_id)
 
+    def test_get_tools_for_agent_with_default_tool(self):
+
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create the tool
+        tool: Tool.Tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="Test Tool",
+            description="Test",
+            code="def test():\n  return 'test'"
+        )
+
+        # Create agent
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="Test Agent",
+            agent_description="Test",
+            prompt="Test",
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[tool.tool_id, "pass_event"] # add the default tool here as well
+        )
+
+        # Create the request
+        request = create_request(
+            method="GET",
+            path="/tools",
+            query_string_parameters={
+                "agent_id": agent.agent_id
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda handler
+        response = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(response["statusCode"], 200)
+        body = json.loads(response["body"])
+
+        # Check the response body
+        self.assertTrue(len(body["tools"]) > 0)
+        self.assertTrue("pass_event" in [tool["tool_id"] for tool in body["tools"]])
+        self.assertTrue(tool.tool_id in [tool["tool_id"] for tool in body["tools"]])
+
+        # Clean up
+        Tool.delete_tool(tool.tool_id)
+        Agent.delete_agent(agent.agent_id)
+        
+
+
