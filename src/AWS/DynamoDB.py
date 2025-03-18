@@ -1,5 +1,6 @@
 import boto3
 from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr
 
 def get_item(table_name: str, primary_key_name: str, key: str) -> dict:
     table = boto3.resource("dynamodb").Table(table_name)
@@ -7,6 +8,13 @@ def get_item(table_name: str, primary_key_name: str, key: str) -> dict:
     if "Item" not in response:
         return None
     return response["Item"]
+
+def get_items_by_scan(table_name: str, primary_key_name: str, keys: list[str]) -> list[dict]:
+    table = boto3.resource("dynamodb").Table(table_name)
+    response = table.scan(
+        FilterExpression=Attr(primary_key_name).is_in(keys)
+    )
+    return response.get('Items', [])
 
 def get_all_items(table_name: str) -> list[dict]:
     table = boto3.resource("dynamodb").Table(table_name)

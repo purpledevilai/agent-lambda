@@ -6,21 +6,14 @@ from pydantic import BaseModel
 class ContextHistoryResponse(BaseModel):
     contexts: list[Context.HistoryContext]
 
-
-def get_context_history_handler(lambda_event: LambdaEvent, user: CognitoUser) -> ContextHistoryResponse:   
+def get_context_history_handler(lambda_event: LambdaEvent, user: CognitoUser) -> ContextHistoryResponse: 
     contexts = Context.get_contexts_by_user_id(user.sub)
 
     agent_ids = set()
     for context in contexts:
         agent_ids.add(context.agent_id)
 
-    agents = {}
-    for agent_id in agent_ids:
-        try:
-            agent = Agent.get_agent(agent_id)
-            agents[agent_id] = agent
-        except:
-            pass
+    agents = {agent.agent_id: agent for agent in Agent.get_agents_from_ids(list(agent_ids))}
 
     return_contexts: list[Context.HistoryContext] = []
     for context in contexts:

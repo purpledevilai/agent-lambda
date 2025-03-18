@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import uuid
-from AWS.DynamoDB import get_item, put_item, delete_item, get_all_items_by_index
+from AWS.DynamoDB import get_item, get_items_by_scan, put_item, delete_item, get_all_items_by_index
 from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel
 from typing import Optional
@@ -113,6 +113,10 @@ def parse_agent_items(items: list[dict]) -> list[Agent]:
         except Exception as e:
             logger.error(f"Error parsing agent: {e}")
     return agents
+
+def get_agents_from_ids(agent_ids: list[str]) -> list[Agent]:
+    items = get_items_by_scan(AGENTS_TABLE_NAME, AGENTS_PRIMARY_KEY, agent_ids)
+    return parse_agent_items(items)
 
 def get_agents_in_org(org_id: str) -> list[Agent]:
     items = get_all_items_by_index(AGENTS_TABLE_NAME, "org_id", org_id)

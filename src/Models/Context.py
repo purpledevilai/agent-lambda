@@ -110,7 +110,7 @@ def delete_all_contexts_for_user(user_id: str) -> None:
 def transform_to_filtered_context(context: Context) -> FilteredContext:
     messages = []
     for message in context.messages:
-        if (message["type"] == "human" or message["type"] == "ai"):
+        if (message["type"] == "human" or (message["type"] == "ai" and message["content"])):
             messages.append(FilteredMessage(**{
                 "sender": message["type"],
                 "message": message["content"]
