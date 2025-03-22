@@ -20,7 +20,7 @@ def create_context_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
 
     context = Context.create_context(body.agent_id, user.sub if user != None else None, body.prompt_args)
 
-    if (body.invoke_agent_message or agent.agent_speaks_first):
+    if (body.invoke_agent_message):
         context = AgentService.invoke_context(context, agent)
 
     return Context.transform_to_filtered_context(context)

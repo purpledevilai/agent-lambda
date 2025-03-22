@@ -255,7 +255,8 @@ class TestContext(unittest.TestCase):
         res_body = json.loads(result["body"])
 
         # Check for name in the first message
-        self.assertTrue("Alice" in res_body["messages"][0]["message"])
+        # Removing because message is streamed now
+        #self.assertTrue("Alice" in res_body["messages"][0]["message"])
 
         # Clean up
         Context.delete_context(res_body["context_id"])
@@ -287,6 +288,10 @@ class TestContext(unittest.TestCase):
 
         # Check the response
         self.assertEqual(result["statusCode"], 200)
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+        Context.delete_context(json.loads(result["body"])["context_id"])
 
 
     def test_create_context_with_agent_that_has_tools_and_speaks_first(self):
