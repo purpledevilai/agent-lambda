@@ -1,0 +1,662 @@
+{
+	"info": {
+		"_postman_id": "e8e588e1-cd7f-479c-a00b-da8c8ba99050",
+		"name": "Ajentify",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "2139913"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": "{{url}}/user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/user"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/user"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Organization",
+			"item": [
+				{
+					"name": "Create Organization",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"PurpDev\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/organization"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Context",
+			"item": [
+				{
+					"name": "Create Context",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"agent_id\": \"c4b683f5-2056-4ccc-9a68-79b1f5b51735\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/context"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Context",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/context/4b13d7ea-6bbf-4fe2-8f85-115c8de4ed0b"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Context",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/context/1b886981-62bd-4642-a9f8-9a9774302f27"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Context History",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/context-history"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Agent",
+			"item": [
+				{
+					"name": "Create Agent",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"agent_name\": \"Domingo\",\n    \"agent_description\": \"My first agent\",\n    \"prompt\": \"You have the best pick up lines\",\n    \"is_public\": false,\n    \"agent_speaks_first\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/agent"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Agents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/agents?org_id=354be6c8-7f1d-4a6a-bff8-9a2f911bcd0e",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"agents"
+							],
+							"query": [
+								{
+									"key": "org_id",
+									"value": "354be6c8-7f1d-4a6a-bff8-9a2f911bcd0e"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Agent",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/agent/82127b76-55e2-4cdb-9b70-8615bfd14b36"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Agent",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"prompt\": \"Introduce yourself as Domingo. You have the best pick up lines\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/agent/82127b76-55e2-4cdb-9b70-8615bfd14b36"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Agent",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/agent/82127b76-55e2-4cdb-9b70-8615bfd14b36"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chat",
+			"item": [
+				{
+					"name": "Chat",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"context_id\": \"4b13d7ea-6bbf-4fe2-8f85-115c8de4ed0b\",\n    \"message\": \"Wow! Thosse are great. What would you say to someone with brown hair?\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/chat"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Voice",
+			"item": [
+				{
+					"name": "Voice Server - voice chat",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"context_id\": \"4b13d7ea-6bbf-4fe2-8f85-115c8de4ed0b\",\n    \"audio\": \"{{voice-base64}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{voice-url}}/voice-chat"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ChatPage",
+			"item": [
+				{
+					"name": "Create Chat Page",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"agent_id\": \"aj-public\",\n    \"org_id\": \"354be6c8-7f1d-4a6a-bff8-9a2f911bcd0e\",\n    \"heading\": \"Test Heading\",\n    \"description\": \"Test Description\",\n    \"chat_page_style\": {\n        \"background_color\": \"#FFFFFF\",\n        \"heading_color\": \"#000000\",\n        \"description_color\": \"#000000\",\n        \"button_background_color\": \"#000000\",\n        \"button_text_color\": \"#FFFFFF\",\n        \"button_hover_background_color\": \"#FFFFFF\",\n        \"button_hover_text_color\": \"#000000\"\n    },\n    \"chat_box_style\": {\n        \"background_color\": \"#FFFFFF\",\n        \"border_color\": \"#000000\",\n        \"ai_message_background_color\": \"#000000\",\n        \"ai_message_text_color\": \"#FFFFFF\",\n        \"user_message_background_color\": \"#000000\",\n        \"user_message_text_color\": \"#FFFFFF\",\n        \"user_input_background_color\": \"#000000\",\n        \"user_input_textarea_background_color\": \"#000000\",\n        \"user_input_textarea_text_color\": \"#FFFFFF\",\n        \"user_input_textarea_focus_color\": \"#000000\",\n        \"user_input_textarea_placeholder_text\": \"Placeholder\",\n        \"user_input_textarea_placeholder_color\": \"#000000\",\n        \"user_input_send_button_color\": \"#FFFFFF\",\n        \"user_input_send_button_hover_color\": \"#000000\",\n        \"user_input_send_button_text_color\": \"#000000\",\n        \"typing_indicator_background_color\": \"#FFFFFF\",\n        \"typing_indicator_dot_color\": \"#000000\"\n    }       \n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/chat-page"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Chat Pages",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/chat-pages"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Voice to Voice WebRTC Server",
+			"item": [
+				{
+					"name": "Agent Link",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"context_id\": \"55d9e7ed-33e5-4f8f-96c4-3ec86923e3c7\",\n  \"offer\": {\n    \"type\": \"offer\",\n    \"sdp\": \"v=0\\r\\no=- 1002285400698002718 2 IN IP4 127.0.0.1\\r\\ns=-\\r\\nt=0 0\\r\\na=group:BUNDLE 0\\r\\na=extmap-allow-mixed\\r\\na=msid-semantic: WMS EF3AEB7F-8FF7-43DC-99DA-B7564F0ABB6E\\r\\nm=audio 9 UDP/TLS/RTP/SAVPF 111 63 9 102 0 8 13 110 126\\r\\nc=IN IP4 0.0.0.0\\r\\na=rtcp:9 IN IP4 0.0.0.0\\r\\na=ice-ufrag:Sddc\\r\\na=ice-pwd:wK3txrHQIt0vX5E2zLR7zg6Z\\r\\na=ice-options:trickle renomination\\r\\na=fingerprint:sha-256 A4:57:C6:DB:6B:84:94:9A:EA:44:F8:2A:04:67:5F:95:3A:78:78:91:7E:DA:17:1F:E3:EE:37:D5:D0:39:BF:ED\\r\\na=setup:actpass\\r\\na=mid:0\\r\\na=extmap:1 urn:ietf:params:rtp-hdrext:ssrc-audio-level\\r\\na=extmap:2 http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time\\r\\na=extmap:3 http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01\\r\\na=extmap:4 urn:ietf:params:rtp-hdrext:sdes:mid\\r\\na=sendrecv\\r\\na=msid:EF3AEB7F-8FF7-43DC-99DA-B7564F0ABB6E F0B1791E-A7A8-44B3-BF1E-3E66E1CC3DA5\\r\\na=rtcp-mux\\r\\na=rtpmap:111 opus/48000/2\\r\\na=rtcp-fb:111 transport-cc\\r\\na=fmtp:111 minptime=10;useinbandfec=1\\r\\na=rtpmap:63 red/48000/2\\r\\na=fmtp:63 111/111\\r\\na=rtpmap:9 G722/8000\\r\\na=rtpmap:102 ILBC/8000\\r\\na=rtpmap:0 PCMU/8000\\r\\na=rtpmap:8 PCMA/8000\\r\\na=rtpmap:13 CN/8000\\r\\na=rtpmap:110 telephone-event/48000\\r\\na=rtpmap:126 telephone-event/8000\\r\\na=ssrc:2227563825 cname:lm9ESBUCwr32ADut\\r\\na=ssrc:2227563825 msid:EF3AEB7F-8FF7-43DC-99DA-B7564F0ABB6E F0B1791E-A7A8-44B3-BF1E-3E66E1CC3DA5\\r\\n\"\n  },\n  \"candidates\": [\n    {\n      \"candidate\": \"candidate:1912164693 1 udp 2122194687 192.168.1.253 60757 typ host generation 0 ufrag Sddc network-id 1 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:5087238 1 udp 2122129151 10.228.86.84 57284 typ host generation 0 ufrag Sddc network-id 10 network-cost 900\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:4092837528 1 udp 2122262783 2405:6e00:22ed:b784:11eb:8ba:40ef:6db 49370 typ host generation 0 ufrag Sddc network-id 2 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:255243213 1 tcp 1518214911 192.168.1.253 55562 typ host tcptype passive generation 0 ufrag Sddc network-id 1 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:2122465950 1 tcp 1518149375 10.228.86.84 55563 typ host tcptype passive generation 0 ufrag Sddc network-id 10 network-cost 900\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:2369543168 1 tcp 1518283007 2405:6e00:22ed:b784:11eb:8ba:40ef:6db 55564 typ host tcptype passive generation 0 ufrag Sddc network-id 2 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:1134969647 1 udp 41820415 172.236.53.77 43141 typ relay raddr 101.115.132.207 rport 1626 generation 0 ufrag Sddc network-id 1 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:1134969647 1 udp 41820927 172.236.53.77 57132 typ relay raddr 101.115.132.207 rport 1624 generation 0 ufrag Sddc network-id 1 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:1030332855 1 udp 25043455 172.236.53.77 36720 typ relay raddr 101.115.132.207 rport 1553 generation 0 ufrag Sddc network-id 1 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:3738526547 1 udp 8265727 172.236.53.77 52862 typ relay raddr 101.115.132.207 rport 1554 generation 0 ufrag Sddc network-id 1 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:1134969647 1 udp 41755391 172.236.53.77 32303 typ relay raddr 101.119.133.227 rport 5828 generation 0 ufrag Sddc network-id 10 network-cost 900\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:1134969647 1 udp 41754879 172.236.53.77 30449 typ relay raddr 101.119.133.227 rport 5828 generation 0 ufrag Sddc network-id 10 network-cost 900\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:3738526547 1 udp 8200191 172.236.53.77 27168 typ relay raddr 101.119.133.227 rport 5650 generation 0 ufrag Sddc network-id 10 network-cost 900\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:1085788847 1 udp 1685921535 101.119.133.227 5828 typ srflx raddr 10.228.86.84 rport 57284 generation 0 ufrag Sddc network-id 10 network-cost 900\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:3736318059 1 udp 1685987071 101.115.132.207 1628 typ srflx raddr 192.168.1.253 rport 60757 generation 0 ufrag Sddc network-id 1 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:152584860 1 udp 2122262783 2405:6e00:22ed:b784::e16 60272 typ host generation 0 ufrag Sddc network-id 2 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    },\n    {\n      \"candidate\": \"candidate:2010619908 1 tcp 1518283007 2405:6e00:22ed:b784::e16 55573 typ host tcptype passive generation 0 ufrag Sddc network-id 2 network-cost 10\",\n      \"sdpMLineIndex\": 0,\n      \"sdpMid\": \"0\"\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{voice-url}}/agent-link"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ScrapPage",
+			"item": [
+				{
+					"name": "Scrape Page",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/scrape-page/https://www.cleaningly.com.au/case-study.html"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ChatBot",
+			"item": [
+				{
+					"name": "GetChatBot",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/chat-bot/3b75598c-a7ad-442d-a16d-1b9e791eb535"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tools",
+			"item": [
+				{
+					"name": "Test Tool",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"function_name\": \"get_weather\",\n    \"code\": \"def get_weather(lat, long):\\n  url = f\\\"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={long}&current=temperature_2m\\\"\\n\\n  try:\\n    data = requests.get(url).json()\\n    return data[\\\"current\\\"][\\\"temperature_2m\\\"]  # Extract temperature\\n  except Exception as e:\\n    return f\\\"Error fetching temperature: {e}\\\"\",\n    \"params\": {\n        \"lat\": -37.8136,\n        \"long\": 144.9631\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/test-tool"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tool",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"add_users\",\n    \"description\": \"Gets the current time\",\n    \"pd_id\": \"3456c351-349a-4b0b-9961-56c9cb064400\",\n    \"code\": \"def add_users(users):\\n    return 'Added the users'\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/tool"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tool",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/tool/c6ac2317-ea88-492a-ab4e-8dcbcd3e7f87"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tool",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"description\": \"Adds users to the database\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/tool/c6ac2317-ea88-492a-ab4e-8dcbcd3e7f87"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tool",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/tool/c6ac2317-ea88-492a-ab4e-8dcbcd3e7f87"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tools",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{url}}/tools?agent_id=654b4cf4-f285-445a-aca2-9e5ad552a9a8",
+							"host": [
+								"{{url}}"
+							],
+							"path": [
+								"tools"
+							],
+							"query": [
+								{
+									"key": "agent_id",
+									"value": "654b4cf4-f285-445a-aca2-9e5ad552a9a8"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "ParameterDefinition",
+			"item": [
+				{
+					"name": "Create PD",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"parameters\": [\n        {\n            \"name\": \"people\",\n            \"type\": \"array\",\n            \"description\": \"list of people\",\n            \"parameters\": [\n                {\n                    \"name\": \"name\",\n                    \"type\": \"string\",\n                    \"description\": \"Name of the person\",\n                    \"parameters\": []\n                }\n            ]\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/parameter-definition"
+					},
+					"response": []
+				},
+				{
+					"name": "Get PD",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/parameter-definition/37f58ce1-3219-4898-9fd5-301a4ee8a501"
+					},
+					"response": []
+				},
+				{
+					"name": "Update PD",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"parameters\": [\n        {\n            \"name\": \"users\",\n            \"type\": \"array\",\n            \"description\": \"list of users\",\n            \"parameters\": [\n                {\n                    \"name\": \"user\",\n                    \"type\": \"object\",\n                    \"description\": \"An object that represents a user in the app\",\n                    \"parameters\": [\n                        {\n                            \"name\": \"name\",\n                            \"type\": \"string\",\n                            \"description\": \"Name of the user\"\n                        },\n                        {\n                            \"name\": \"age\",\n                            \"type\": \"number\",\n                            \"description\": \"Age of the user\"\n                        },\n                        {\n                            \"name\": \"personality_type\",\n                            \"type\": \"enum\",\n                            \"description\": \"Personality Type\",\n                            \"parameters\": [\n                                {\n                                    \"name\": \"introverted\",\n                                    \"type\": \"string\",\n                                    \"description\": \"Shy, internal focused personality\"\n                                },\n                                {\n                                    \"name\": \"extroverted\",\n                                    \"type\": \"string\",\n                                    \"description\": \"Energetic, outgoing focused personality\"\n                                }\n                            ]\n                        }\n                    ]\n                }\n            ]\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/parameter-definition/37f58ce1-3219-4898-9fd5-301a4ee8a501"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete PD",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/parameter-definition/37f58ce1-3219-4898-9fd5-301a4ee8a501"
+					},
+					"response": []
+				},
+				{
+					"name": "Get all PDs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/parameter-definitions"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chat Stream Server",
+			"item": [
+				{
+					"name": "Chat",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"context_id\": \"f063185a-ba67-4a6a-95d0-f89f107278b5\",\n    \"message\": \"hello, there\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{chat-stream-url}}/chat"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "SingleMessageEndpoints",
+			"item": [
+				{
+					"name": "Create SME",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pd_id\": \"3164e99d-8b07-4eb3-896f-812066780f65\",\n    \"name\": \"extract_people\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/sme"
+					},
+					"response": []
+				},
+				{
+					"name": "Get SME",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/sme/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+					},
+					"response": []
+				},
+				{
+					"name": "Update SME",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"is_public\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/sme/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete SME",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{url}}/sme/c109fc49-3080-414c-a795-0a915eb6edfa"
+					},
+					"response": []
+				},
+				{
+					"name": "Get SMEs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{url}}/smes"
+					},
+					"response": []
+				},
+				{
+					"name": "Run SME",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"message\": \"There was a man named Joe, he made a computer he called jane. Joe had a partner named Chris that helped him\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{url}}/run-sme/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": {
+			"value": "{{access-token}}",
+			"key": "Authorization"
+		}
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "url",
+			"value": "https://api.ajentify.com",
+			"type": "string"
+		},
+		{
+			"key": "voice-url",
+			"value": "https://voice-service.prod.voice.ajentify.com",
+			"type": "string"
+		},
+		{
+			"key": "chat-stream-url",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "access-token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "voice-base64",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
