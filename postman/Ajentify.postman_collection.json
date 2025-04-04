@@ -542,7 +542,7 @@
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/sre/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+						"url": "{{url}}/sre/e088a101-c8dd-4007-a27d-3cb99a665f7a"
 					},
 					"response": []
 				},
@@ -553,14 +553,14 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"is_public\": true\n}",
+							"raw": "{\n    \"name\": \"extract_people\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
 								}
 							}
 						},
-						"url": "{{url}}/sre/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+						"url": "{{url}}/sre/ebc60947-42b1-4344-ae20-3203c508504d"
 					},
 					"response": []
 				},
@@ -569,7 +569,7 @@
 					"request": {
 						"method": "DELETE",
 						"header": [],
-						"url": "{{url}}/sre/c109fc49-3080-414c-a795-0a915eb6edfa"
+						"url": "{{url}}/sre/e088a101-c8dd-4007-a27d-3cb99a665f7a"
 					},
 					"response": []
 				},
@@ -589,14 +589,14 @@
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"message\": \"There was a man named Joe, he made a computer he called jane. Joe had a partner named Chris that helped him\"\n}",
+							"raw": "{\n    \"prompt\": \"There was a man named Joe, he made a computer he called jane. Joe had a partner named Chris that helped him\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
 								}
 							}
 						},
-						"url": "{{url}}/run-sre/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+						"url": "{{url}}/run-sre/ebc60947-42b1-4344-ae20-3203c508504d"
 					},
 					"response": []
 				}
@@ -635,7 +635,7 @@
 	"variable": [
 		{
 			"key": "url",
-			"value": "https://api.ajentify.com",
+			"value": "https://20yz4xw0ib.execute-api.ap-southeast-4.amazonaws.com/v1",
 			"type": "string"
 		},
 		{
