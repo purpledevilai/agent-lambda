@@ -66,13 +66,13 @@ from RequestHandlers.Tool.DeleteToolHandler import delete_tool_handler
 from RequestHandlers.Tool.GetToolsHandler import get_tools_handler
 from RequestHandlers.Tool.TestToolHandler import test_tool_handler
 
-# Single Message Endpoint
-from RequestHandlers.SingleMessageEndpoint.CreateSMEHandler import create_sme_handler
-from RequestHandlers.SingleMessageEndpoint.GetSMEHandler import get_sme_handler
-from RequestHandlers.SingleMessageEndpoint.UpdateSMEHandler import update_sme_handler
-from RequestHandlers.SingleMessageEndpoint.DeleteSMEHandler import delete_sme_handler
-from RequestHandlers.SingleMessageEndpoint.GetSMEsHandler import get_smes_handler
-from RequestHandlers.SingleMessageEndpoint.RunSMEHandler import run_sme_handler
+# Structured Response Endpoint
+from RequestHandlers.StructuredResponseEndpoint.CreateSREHandler import create_sre_handler
+from RequestHandlers.StructuredResponseEndpoint.GetSREHandler import get_sre_handler
+from RequestHandlers.StructuredResponseEndpoint.UpdateSREHandler import update_sre_handler
+from RequestHandlers.StructuredResponseEndpoint.DeleteSREHandler import delete_sre_handler
+from RequestHandlers.StructuredResponseEndpoint.GetSREsHandler import get_sres_handler
+from RequestHandlers.StructuredResponseEndpoint.RunSREHandler import run_sre_handler
 
 
 
@@ -264,35 +264,35 @@ handler_registry = {
             "public": False
         }
     },
-    "/sme": {
+    "/sre": {
         "POST": {
-            "handler": create_sme_handler,
+            "handler": create_sre_handler,
             "public": False
         }
     },
-    "/sme/{sme_id}": {
+    "/sre/{sre_id}": {
         "GET": {
-            "handler": get_sme_handler,
+            "handler": get_sre_handler,
             "public": False
         },
         "POST": {
-            "handler": update_sme_handler,
+            "handler": update_sre_handler,
             "public": False
         },
         "DELETE": {
-            "handler": delete_sme_handler,
+            "handler": delete_sre_handler,
             "public": False
         }
     },
-    "/smes": {
+    "/sres": {
         "GET": {
-            "handler": get_smes_handler,
+            "handler": get_sres_handler,
             "public": False
         }
     },
-    "/run-sme/{sme_id}": {
+    "/run-sre/{sre_id}": {
         "POST": {
-            "handler": run_sme_handler,
+            "handler": run_sre_handler,
             "public": True
         }
     }

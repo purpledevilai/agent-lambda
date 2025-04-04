@@ -517,10 +517,10 @@
 			]
 		},
 		{
-			"name": "SingleMessageEndpoints",
+			"name": "StructuredResponseEndpoints",
 			"item": [
 				{
-					"name": "Create SME",
+					"name": "Create SRE",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -533,21 +533,21 @@
 								}
 							}
 						},
-						"url": "{{url}}/sme"
+						"url": "{{url}}/sre"
 					},
 					"response": []
 				},
 				{
-					"name": "Get SME",
+					"name": "Get SRE",
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/sme/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+						"url": "{{url}}/sre/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
 					},
 					"response": []
 				},
 				{
-					"name": "Update SME",
+					"name": "Update SRE",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -560,30 +560,30 @@
 								}
 							}
 						},
-						"url": "{{url}}/sme/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+						"url": "{{url}}/sre/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
 					},
 					"response": []
 				},
 				{
-					"name": "Delete SME",
+					"name": "Delete SRE",
 					"request": {
 						"method": "DELETE",
 						"header": [],
-						"url": "{{url}}/sme/c109fc49-3080-414c-a795-0a915eb6edfa"
+						"url": "{{url}}/sre/c109fc49-3080-414c-a795-0a915eb6edfa"
 					},
 					"response": []
 				},
 				{
-					"name": "Get SMEs",
+					"name": "Get SREs",
 					"request": {
 						"method": "GET",
 						"header": [],
-						"url": "{{url}}/smes"
+						"url": "{{url}}/sres"
 					},
 					"response": []
 				},
 				{
-					"name": "Run SME",
+					"name": "Run SRE",
 					"request": {
 						"method": "POST",
 						"header": [],
@@ -596,7 +596,7 @@
 								}
 							}
 						},
-						"url": "{{url}}/run-sme/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
+						"url": "{{url}}/run-sre/1d5fc0bd-13a8-4d9f-affa-d33b27126863"
 					},
 					"response": []
 				}

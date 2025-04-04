@@ -1,13 +1,13 @@
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
-from Models import User, SingleMessageEndpoint as SME
+from Models import User, StructuredResponseEndpoint as SRE
 from pydantic import BaseModel
 
-class GetSMEsResponse(BaseModel):
-    smes: list[SME.SingleMessageEndpoint]
+class GetSREsResponse(BaseModel):
+    sres: list[SRE.StructuredResponseEndpoint]
 
 
-def get_smes_handler(lambda_event: LambdaEvent, user: CognitoUser) -> GetSMEsResponse:
+def get_sres_handler(lambda_event: LambdaEvent, user: CognitoUser) -> GetSREsResponse:
     # Get user object
     user = User.get_user(user.sub)
 
@@ -25,7 +25,7 @@ def get_smes_handler(lambda_event: LambdaEvent, user: CognitoUser) -> GetSMEsRes
     elif org_id not in user.organizations:
         raise Exception("User is not a member of the specified organization", 403)
 
-    # Fetch SMEs for the organization
-    smes = SME.get_smes_for_org(org_id)
+    # Fetch SREs for the organization
+    sres = SRE.get_sres_for_org(org_id)
 
-    return GetSMEsResponse(smes=smes)
+    return GetSREsResponse(sres=sres)

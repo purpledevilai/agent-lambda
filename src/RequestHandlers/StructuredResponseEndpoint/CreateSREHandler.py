@@ -1,15 +1,15 @@
 import json
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
-from Models import SingleMessageEndpoint as SME
+from Models import StructuredResponseEndpoint as SRE
 from Models import User, ParameterDefinition
 
 
-def create_sme_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SME.SingleMessageEndpoint:
+def create_sre_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SRE.StructuredResponseEndpoint:
     dbUser = User.get_user(user.sub)
 
     # Parse and validate request body
-    body = SME.CreateSMEParams(**json.loads(lambda_event.body))
+    body = SRE.CreateSREParams(**json.loads(lambda_event.body))
     
     # Default to first organization if org_id is not provided
     if body.org_id is None:
@@ -20,8 +20,8 @@ def create_sme_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SME.Sing
     # Validate that the user has access to the parameter definition
     ParameterDefinition.get_parameter_definition_for_user(body.pd_id, dbUser)
 
-    # Create the SME
-    sme = SME.create_sme(
+    # Create the SRE
+    sre = SRE.create_sre(
         org_id=body.org_id,
         name=body.name,
         description=body.description,
@@ -29,4 +29,4 @@ def create_sme_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SME.Sing
         is_public=body.is_public,
     )
 
-    return sme
+    return sre

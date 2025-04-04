@@ -1,4 +1,4 @@
-from src.Models import SingleMessageEndpoint as SME, ParameterDefinition, User
+from src.Models import StructuredResponseEndpoint as SRE, ParameterDefinition, User
 from src.AWS import Cognito
 from src.lambda_function import lambda_handler
 from tests.config import access_token
@@ -10,9 +10,9 @@ sys.path.append("../")
 # Import for test
 
 
-class TestSME(unittest.TestCase):
+class TestSRE(unittest.TestCase):
 
-    def test_create_sme(self):
+    def test_create_sre(self):
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
@@ -38,7 +38,7 @@ class TestSME(unittest.TestCase):
         # Create request
         request = create_request(
             method="POST",
-            path="/sme",
+            path="/sre",
             headers={
                 "Authorization": access_token
             },
@@ -62,10 +62,10 @@ class TestSME(unittest.TestCase):
         self.assertEqual(result["pd_id"], pd.pd_id)
 
         # Clean up
-        SME.delete_sme(result["sme_id"])
+        SRE.delete_sre(result["sre_id"])
         ParameterDefinition.delete_parameter_definition(pd.pd_id)
 
-    def test_get_sme(self):
+    def test_get_sre(self):
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
@@ -88,7 +88,7 @@ class TestSME(unittest.TestCase):
             ]
         )
 
-        sme = SME.create_sme(
+        sre = SRE.create_sre(
             org_id=user.organizations[0],
             name="Extract People",
             description="Extracts people from a text",
@@ -98,7 +98,7 @@ class TestSME(unittest.TestCase):
         # Create request
         request = create_request(
             method="GET",
-            path=f"/sme/{sme.sme_id}",
+            path=f"/sre/{sre.sre_id}",
             headers={
                 "Authorization": access_token
             },
@@ -117,10 +117,10 @@ class TestSME(unittest.TestCase):
         self.assertEqual(result["pd_id"], pd.pd_id)
 
         # Clean up
-        SME.delete_sme(sme.sme_id)
+        SRE.delete_sre(sre.sre_id)
         ParameterDefinition.delete_parameter_definition(pd.pd_id)
 
-    def test_update_sme(self):
+    def test_update_sre(self):
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
@@ -143,7 +143,7 @@ class TestSME(unittest.TestCase):
             ]
         )
 
-        sme = SME.create_sme(
+        sre = SRE.create_sre(
             org_id=user.organizations[0],
             name="Extract People",
             description="Extracts people from a text",
@@ -153,7 +153,7 @@ class TestSME(unittest.TestCase):
         # Create request
         request = create_request(
             method="POST",
-            path=f"/sme/{sme.sme_id}",
+            path=f"/sre/{sre.sre_id}",
             headers={
                 "Authorization": access_token
             },
@@ -176,10 +176,10 @@ class TestSME(unittest.TestCase):
                          "Extracts people from a text and their age")
 
         # Clean up
-        SME.delete_sme(sme.sme_id)
+        SRE.delete_sre(sre.sre_id)
         ParameterDefinition.delete_parameter_definition(pd.pd_id)
 
-    def test_delete_sme(self):
+    def test_delete_sre(self):
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
@@ -202,7 +202,7 @@ class TestSME(unittest.TestCase):
             ]
         )
 
-        sme = SME.create_sme(
+        sre = SRE.create_sre(
             org_id=user.organizations[0],
             name="Extract People",
             description="Extracts people from a text",
@@ -212,7 +212,7 @@ class TestSME(unittest.TestCase):
         # Create request
         request = create_request(
             method="DELETE",
-            path=f"/sme/{sme.sme_id}",
+            path=f"/sre/{sre.sre_id}",
             headers={
                 "Authorization": access_token
             },
@@ -227,12 +227,12 @@ class TestSME(unittest.TestCase):
         # Parse result
         result = json.loads(response["body"])
 
-        self.assertTrue(SME.sme_exists(sme.sme_id) is False)
+        self.assertTrue(SRE.sre_exists(sre.sre_id) is False)
 
         # Clean up
         ParameterDefinition.delete_parameter_definition(pd.pd_id)
 
-    def test_get_smes(self):
+    def test_get_sres(self):
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
@@ -255,7 +255,7 @@ class TestSME(unittest.TestCase):
             ]
         )
 
-        sme = SME.create_sme(
+        sre = SRE.create_sre(
             org_id=user.organizations[0],
             name="Extract People",
             description="Extracts people from a text",
@@ -265,7 +265,7 @@ class TestSME(unittest.TestCase):
         # Create request
         request = create_request(
             method="GET",
-            path="/smes",
+            path="/sres",
             headers={
                 "Authorization": access_token
             },
@@ -281,13 +281,13 @@ class TestSME(unittest.TestCase):
         result = json.loads(response["body"])
         print(result)
 
-        self.assertGreaterEqual(len(result["smes"]), 1)
+        self.assertGreaterEqual(len(result["sres"]), 1)
 
         # Clean up
-        SME.delete_sme(sme.sme_id)
+        SRE.delete_sre(sre.sre_id)
         ParameterDefinition.delete_parameter_definition(pd.pd_id)
 
-    def test_run_sme(self):
+    def test_run_sre(self):
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
@@ -310,7 +310,7 @@ class TestSME(unittest.TestCase):
             ]
         )
 
-        sme = SME.create_sme(
+        sre = SRE.create_sre(
             org_id=user.organizations[0],
             name="Extract_People",
             description="Extracts people from a text",
@@ -320,12 +320,12 @@ class TestSME(unittest.TestCase):
         # Create request
         request = create_request(
             method="POST",
-            path=f"/run-sme/{sme.sme_id}",
+            path=f"/run-sre/{sre.sre_id}",
             headers={
                 "Authorization": access_token
             },
             body={
-                "message": "My name is John Doe and I live in New York with my sister Jane Doe. We have a cousing named John Smith."
+                "prompt": "My name is John Doe and I live in New York with my sister Jane Doe. We have a cousing named John Smith."
             }
         )
 
@@ -342,10 +342,10 @@ class TestSME(unittest.TestCase):
         self.assertGreater(len(result["people"]), 0)
 
         # Clean up
-        SME.delete_sme(sme.sme_id)
+        SRE.delete_sre(sre.sre_id)
         ParameterDefinition.delete_parameter_definition(pd.pd_id)
 
-    def test_run_sme_with_enum_param_def(self):
+    def test_run_sre_with_enum_param_def(self):
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
@@ -392,7 +392,7 @@ class TestSME(unittest.TestCase):
             ]
         )
 
-        sme = SME.create_sme(
+        sre = SRE.create_sre(
             org_id=user.organizations[0],
             name="Extract_People",
             description="Extracts people from a text with name and age enum",
@@ -402,12 +402,12 @@ class TestSME(unittest.TestCase):
         # Create request
         request = create_request(
             method="POST",
-            path=f"/run-sme/{sme.sme_id}",
+            path=f"/run-sre/{sre.sre_id}",
             headers={
                 "Authorization": access_token
             },
             body={
-                "message": "My name is John Doe and I live in New York with my sister Jane Doe. We have a cousin named John Smith."
+                "prompt": "My name is John Doe and I live in New York with my sister Jane Doe. We have a cousin named John Smith."
             }
         )
 
@@ -416,7 +416,7 @@ class TestSME(unittest.TestCase):
 
         # Clean up
         ParameterDefinition.delete_parameter_definition(pd.pd_id)
-        SME.delete_sme(sme.sme_id)
+        SRE.delete_sre(sre.sre_id)
 
         # Check the response
         self.assertEqual(response["statusCode"], 200)
