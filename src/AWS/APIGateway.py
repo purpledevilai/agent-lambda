@@ -1,11 +1,15 @@
 import json
 import decimal
 from typing import TypedDict
+from enum import Enum
+
 
 # Dumb thing to handle decimal types
 def default_type_error_handler(obj):
     if isinstance(obj, decimal.Decimal):
         return int(obj)
+    if isinstance(obj, Enum):
+        return obj.value
     raise Exception(f"Object of type {type(obj)} with value of {repr(obj)} is not JSON serializable")
 
 class APIGatewayResponse(TypedDict):

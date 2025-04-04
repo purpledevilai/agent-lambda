@@ -34,7 +34,7 @@ def run_sme_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
     pd = ParameterDefinition.get_parameter_definition(sme.pd_id)
 
     # Create the pydantic class that will be the output of the LLM
-    extract_object = ParameterDefinition.create_pydantic_class(sme.name, pd.parameters)
+    extract_object = ParameterDefinition.create_pydantic_class(sme.name, pd.parameters, docstring=sme.description)
 
     # Run the LLM
     llm_response = llm_extract(extract_object, message, create_llm())
