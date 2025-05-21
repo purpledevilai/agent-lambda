@@ -9,7 +9,7 @@ docker run \
 -v ./:/app \
 -d \
 --name agent_lambda_test_container \
-recomendation_engine_test_image
+agent_lambda_test_image
 
 # Launch bash
 docker exec -it agent_lambda_test_container bash

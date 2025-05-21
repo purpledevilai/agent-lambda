@@ -4,7 +4,7 @@ import uuid
 from AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item
 from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional, Union
 from Models import Agent
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
@@ -30,11 +30,24 @@ class FilteredMessage(BaseModel):
     sender: str
     message: str
 
+class ToolCallMessage(BaseModel):
+    type: str
+    tool_call_id: str
+    tool_name: str
+    tool_input: Optional[dict] = None
+
+class ToolResponseMessage(BaseModel):
+    type: str
+    tool_call_id: str
+    tool_output: str
+
+MessageType = Union[FilteredMessage, ToolCallMessage, ToolResponseMessage]
+
 class FilteredContext(BaseModel):
     context_id: str
     agent_id: str
     user_id: str
-    messages: list[FilteredMessage]
+    messages: List[MessageType]
     created_at: int
     updated_at: int
 
@@ -107,14 +120,31 @@ def delete_all_contexts_for_user(user_id: str) -> None:
     for context in contexts:
         delete_context(context.context_id)
 
-def transform_to_filtered_context(context: Context) -> FilteredContext:
+def transform_to_filtered_context(context: Context, show_tool_calls: bool = False) -> FilteredContext:
     messages = []
     for message in context.messages:
         if (message["type"] == "human" or (message["type"] == "ai" and message["content"])):
-            messages.append(FilteredMessage(**{
-                "sender": message["type"],
-                "message": message["content"]
-            }))
+                messages.append(FilteredMessage(**{
+                    "sender": message["type"],
+                    "message": message["content"]
+                }))
+                continue
+        if (show_tool_calls):
+            if (message["type"] == "ai" and len(message["tool_calls"]) > 0):
+                for tool_call in message["tool_calls"]:
+                    messages.append(ToolCallMessage(**{
+                        "type": "tool_call",
+                        "tool_call_id": tool_call["id"],
+                        "tool_name": tool_call["name"],
+                        "tool_input": tool_call["args"]
+                    }))
+            if (message["type"] == "tool"):
+                messages.append(ToolResponseMessage(**{
+                    "type": "tool_response",
+                    "tool_call_id": message["tool_call_id"],
+                    "tool_output": message["content"]
+                }))
+                
     filtered_context = FilteredContext(**{
         "context_id": context.context_id,
         "agent_id": context.agent_id,

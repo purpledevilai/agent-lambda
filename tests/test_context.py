@@ -380,3 +380,24 @@ const sayHello(name: string) {
         Context.delete_context(res_body["context_id"])
         Agent.delete_agent(agent.agent_id)
 
+    def get_context_with_tool_messages(self):
+        context_with_tool_messages = "6dc15c64-223c-48f8-9e7f-8dea288a9887"
+
+        # Create the request
+        request = create_request(
+            method="GET",
+            path=f"/context/{context_with_tool_messages}",
+            query_string_parameters={
+                "with_tool_calls": True
+            }
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Get the body
+        res_body = json.loads(result["body"])
+
+        # Print result
+        print(json.dumps(res_body, indent=4))
+
