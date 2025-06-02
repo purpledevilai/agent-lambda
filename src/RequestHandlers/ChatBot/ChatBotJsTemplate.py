@@ -194,7 +194,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const response = await fetch('https://api.ajentify.com/context', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ agent_id: agentId })
+            body: JSON.stringify({ agent_id: agentId, invoke_agent_message: agentSpeaksFirst })
         });
         const data = await response.json();
         contextId = data.context_id;
