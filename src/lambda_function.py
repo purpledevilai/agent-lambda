@@ -74,6 +74,14 @@ from RequestHandlers.StructuredResponseEndpoint.DeleteSREHandler import delete_s
 from RequestHandlers.StructuredResponseEndpoint.GetSREsHandler import get_sres_handler
 from RequestHandlers.StructuredResponseEndpoint.RunSREHandler import run_sre_handler
 
+# JSON Documents
+from RequestHandlers.JSONDocument.CreateJSONDocumentHandler import create_json_document_handler
+from RequestHandlers.JSONDocument.GetJSONDocumentHandler import get_json_document_handler
+from RequestHandlers.JSONDocument.UpdateJSONDocumentHandler import update_json_document_handler
+from RequestHandlers.JSONDocument.DeleteJSONDocumentHandler import delete_json_document_handler
+from RequestHandlers.JSONDocument.GetJSONDocumentsHandler import get_json_documents_handler
+
+
 
 
 # Set up the logger
@@ -295,8 +303,33 @@ handler_registry = {
             "handler": run_sre_handler,
             "public": True
         }
-    }
-
+    },
+   "/json-document": {
+        "POST": {
+            "handler": create_json_document_handler,
+            "public": False
+        }
+    },
+    "/json-document/{document_id}": {
+        "GET": {
+            "handler": get_json_document_handler,
+            "public": True
+        },
+        "POST": {
+            "handler": update_json_document_handler,
+            "public": False
+        },
+        "DELETE": {
+            "handler": delete_json_document_handler,
+            "public": False
+        }
+    },
+    "/json-documents": {
+        "GET": {
+            "handler": get_json_documents_handler,
+            "public": False
+        }
+    },
 }
 
 def match_route(request_path: str, method: str, handler_registry: dict) -> tuple:
