@@ -80,6 +80,9 @@ from RequestHandlers.JSONDocument.GetJSONDocumentHandler import get_json_documen
 from RequestHandlers.JSONDocument.UpdateJSONDocumentHandler import update_json_document_handler
 from RequestHandlers.JSONDocument.DeleteJSONDocumentHandler import delete_json_document_handler
 from RequestHandlers.JSONDocument.GetJSONDocumentsHandler import get_json_documents_handler
+from RequestHandlers.JSONDocument.GetGraphQLSchemaHandler import get_graphql_schema_handler
+from RequestHandlers.JSONDocument.GraphQLQueryHandler import graphql_query_handler
+from RequestHandlers.JSONDocument.MutateJSONDocumentHandler import mutate_json_document_handler
 
 
 
@@ -321,6 +324,24 @@ handler_registry = {
         },
         "DELETE": {
             "handler": delete_json_document_handler,
+            "public": False
+        }
+    },
+    "/json-document/{document_id}/schema": {
+        "GET": {
+            "handler": get_graphql_schema_handler,
+            "public": True
+        }
+    },
+    "/json-document/{document_id}/graphql": {
+        "POST": {
+            "handler": graphql_query_handler,
+            "public": True
+        }
+    },
+    "/json-document/{document_id}/mutate": {
+        "POST": {
+            "handler": mutate_json_document_handler,
             "public": False
         }
     },
