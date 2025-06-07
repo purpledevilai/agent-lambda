@@ -178,7 +178,7 @@ def _infer_shape(value: Any):
         return "null"
     if isinstance(value, bool):
         return "boolean"
-    if isinstance(value, (int, float)):
+    if isinstance(value, (int, float)) or type(value).__name__ == 'Decimal':
         return "number"
     if isinstance(value, str):
         return "string"
@@ -212,7 +212,7 @@ def _infer_shape(value: Any):
 
 # --------------------- Extended Functions ---------------------
 
-def set(document_id: str, path: str, value: str, type: str, user: Optional[User.User] = None) -> JSONDocument:
+def set_value(document_id: str, path: str, value: str, type: str, user: Optional[User.User] = None) -> JSONDocument:
     document = get_json_document_for_user(document_id, user) if user else get_public_json_document(document_id)
     parsed = _parse_value(value, type)
     parent, last = _navigate_to_parent(document.data, path.split("."), True)

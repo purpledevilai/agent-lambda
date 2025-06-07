@@ -15,4 +15,4 @@ def set_json_value_handler(lambda_event: LambdaEvent, user: CognitoUser) -> JSON
     if not document_id:
         raise Exception("document_id is required", 400)
     db_user = User.get_user(user.sub)
-    return JSONDocument.set(document_id, body.path, body.value, body.type, db_user)
+    return JSONDocument.set_value(document_id, body.path, body.value, body.type, db_user)

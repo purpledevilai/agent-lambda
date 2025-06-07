@@ -317,6 +317,9 @@ class TestJSONDocuments(unittest.TestCase):
         )
         res = lambda_handler(req, None)
         self.assertEqual(res["statusCode"], 200)
+        body = json.loads(res["body"])
+        print("Set Response:", json.dumps(body, indent=2))
+        self.assertEqual(body["data"]["profile"]["last"], "reeves")
 
         # Add list item
         req = create_request(
@@ -325,7 +328,11 @@ class TestJSONDocuments(unittest.TestCase):
             headers={"Authorization": access_token},
             body={"path": "people", "value": "Alice", "type": "string"}
         )
-        lambda_handler(req, None)
+        res = lambda_handler(req, None)
+        self.assertEqual(res["statusCode"], 200)
+        body = json.loads(res["body"])
+        print("Add Response:", json.dumps(body, indent=2))
+        self.assertIn("Alice", body["data"]["people"])
 
         # Get value
         req = create_request(
@@ -334,8 +341,11 @@ class TestJSONDocuments(unittest.TestCase):
             headers={"Authorization": access_token},
             query_string_parameters={"path": "profile.last"}
         )
-        value_res = lambda_handler(req, None)
-        self.assertEqual(json.loads(value_res["body"])["value"], "reeves")
+        res = lambda_handler(req, None)
+        self.assertEqual(res["statusCode"], 200)
+        body = json.loads(res["body"])
+        print("Get Value Response:", json.dumps(body, indent=2))
+        self.assertEqual(body["value"], "reeves")
 
         # Delete value
         req = create_request(
@@ -344,7 +354,11 @@ class TestJSONDocuments(unittest.TestCase):
             headers={"Authorization": access_token},
             body={"path": "profile.last"}
         )
-        lambda_handler(req, None)
+        res = lambda_handler(req, None)
+        self.assertEqual(res["statusCode"], 200)
+        body = json.loads(res["body"])
+        print("Delete Response:", json.dumps(body, indent=2))
+        self.assertNotIn("last", body["data"]["profile"])
 
         # Get shape
         req = create_request(
@@ -352,10 +366,74 @@ class TestJSONDocuments(unittest.TestCase):
             path=f"/json-document/{doc.document_id}/shape",
             headers={"Authorization": access_token}
         )
-        shape_res = lambda_handler(req, None)
-        body = json.loads(shape_res["body"])
-        self.assertIn("profile", body["schema"])
-        self.assertIn("people", body["schema"])
+        res = lambda_handler(req, None)
+        body = json.loads(res["body"])
+        self.assertEqual(res["statusCode"], 200)
+        print("Shape Response:", json.dumps(body, indent=2))
+        self.assertIn("string", body["schema"]["people"])
+        self.assertEqual(body["schema"]["profile"], {"first": "string"})
+
+        # Add a person object to people
+        req = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/add",
+            headers={"Authorization": access_token},
+            body={"path": "people", "value": json.dumps({"name": "Bob", "age": 30}), "type": "json"}
+        )
+        res = lambda_handler(req, None)
+        self.assertEqual(res["statusCode"], 200)
+        body = json.loads(res["body"])
+        print("Add Object Response:", json.dumps(body, indent=2))
+        self.assertIn({"name": "Bob", "age": 30}, body["data"]["people"])
+
+        # Set a pets list
+        req = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/set",
+            headers={"Authorization": access_token},
+            body={"path": "pets", "value": json.dumps([{"name": "Athena", "type_code": 2}, {"name": "Failt", "type_code": 2}]), "type": "json"}
+        )
+        res = lambda_handler(req, None)
+        self.assertEqual(res["statusCode"], 200)
+        body = json.loads(res["body"])
+        print("Set Pets Response:", json.dumps(body, indent=2))
+
+        # Get the shape again
+        req = create_request(
+            method="GET",
+            path=f"/json-document/{doc.document_id}/shape",
+            headers={"Authorization": access_token}
+        )
+        res = lambda_handler(req, None)
+        body = json.loads(res["body"])
+        self.assertEqual(res["statusCode"], 200)
+        print("Updated Shape Response:", json.dumps(body, indent=2))
+        self.assertEqual(body["schema"]["pets"], [{"name": "string", "type_code": "number"}])
+
+        # Add a variation to pets
+        req = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/add",
+            headers={"Authorization": access_token},
+            body={"path": "pets", "value": json.dumps({"name": "Luna", "type_code": 2, "age": 3}), "type": "json"}
+        )
+        res = lambda_handler(req, None)
+        self.assertEqual(res["statusCode"], 200)
+        body = json.loads(res["body"])
+        print("Add Variation Response:", json.dumps(body, indent=2))
+        self.assertIn({"name": "Luna", "type_code": 2, "age": 3}, body["data"]["pets"])
+
+        # Get the shape again
+        req = create_request(
+            method="GET",
+            path=f"/json-document/{doc.document_id}/shape",
+            headers={"Authorization": access_token}
+        )
+        res = lambda_handler(req, None)
+        body = json.loads(res["body"])
+        self.assertEqual(res["statusCode"], 200)
+        print("Updated Shape Response:", json.dumps(body, indent=2))
+        self.assertEqual(body["schema"]["pets"], [{"name": "string", "type_code": "number", "age": "optional number"}])
 
         JSONDocument.delete_json_document(doc.document_id)
 
