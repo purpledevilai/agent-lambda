@@ -297,3 +297,65 @@ class TestJSONDocuments(unittest.TestCase):
         JSONDocument.delete_json_document(private_document.document_id)
 
 
+    def test_set_get_add_delete_and_shape(self):
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        doc = JSONDocument.create_json_document(
+            JSONDocument.CreateJSONDocumentParams(
+                org_id=user.organizations[0],
+                data={"profile": {"first": "keanu"}, "people": []}
+            )
+        )
+
+        # Set a value
+        req = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/set",
+            headers={"Authorization": access_token},
+            body={"path": "profile.last", "value": "reeves", "type": "string"}
+        )
+        res = lambda_handler(req, None)
+        self.assertEqual(res["statusCode"], 200)
+
+        # Add list item
+        req = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/add",
+            headers={"Authorization": access_token},
+            body={"path": "people", "value": "Alice", "type": "string"}
+        )
+        lambda_handler(req, None)
+
+        # Get value
+        req = create_request(
+            method="GET",
+            path=f"/json-document/{doc.document_id}/value",
+            headers={"Authorization": access_token},
+            query_string_parameters={"path": "profile.last"}
+        )
+        value_res = lambda_handler(req, None)
+        self.assertEqual(json.loads(value_res["body"])["value"], "reeves")
+
+        # Delete value
+        req = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/delete",
+            headers={"Authorization": access_token},
+            body={"path": "profile.last"}
+        )
+        lambda_handler(req, None)
+
+        # Get shape
+        req = create_request(
+            method="GET",
+            path=f"/json-document/{doc.document_id}/shape",
+            headers={"Authorization": access_token}
+        )
+        shape_res = lambda_handler(req, None)
+        body = json.loads(shape_res["body"])
+        self.assertIn("profile", body["schema"])
+        self.assertIn("people", body["schema"])
+
+        JSONDocument.delete_json_document(doc.document_id)
+

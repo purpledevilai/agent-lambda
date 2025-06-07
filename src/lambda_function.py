@@ -80,6 +80,11 @@ from RequestHandlers.JSONDocument.GetJSONDocumentHandler import get_json_documen
 from RequestHandlers.JSONDocument.UpdateJSONDocumentHandler import update_json_document_handler
 from RequestHandlers.JSONDocument.DeleteJSONDocumentHandler import delete_json_document_handler
 from RequestHandlers.JSONDocument.GetJSONDocumentsHandler import get_json_documents_handler
+from RequestHandlers.JSONDocument.SetJSONValueHandler import set_json_value_handler
+from RequestHandlers.JSONDocument.AddListItemHandler import add_list_item_handler
+from RequestHandlers.JSONDocument.DeleteValueHandler import delete_value_handler
+from RequestHandlers.JSONDocument.GetValueHandler import get_value_handler
+from RequestHandlers.JSONDocument.GetSchema import get_schema_handler
 
 
 
@@ -322,6 +327,36 @@ handler_registry = {
         "DELETE": {
             "handler": delete_json_document_handler,
             "public": False
+        }
+    },
+    "/json-document/{document_id}/set": {
+        "POST": {
+            "handler": set_json_value_handler,
+            "public": False
+        }
+    },
+    "/json-document/{document_id}/add": {
+        "POST": {
+            "handler": add_list_item_handler,
+            "public": False
+        }
+    },
+    "/json-document/{document_id}/delete": {
+        "POST": {
+            "handler": delete_value_handler,
+            "public": False
+        }
+    },
+    "/json-document/{document_id}/value": {
+        "GET": {
+            "handler": get_value_handler,
+            "public": True
+        }
+    },
+    "/json-document/{document_id}/shape": {
+        "GET": {
+            "handler": get_schema_handler,
+            "public": True
         }
     },
     "/json-documents": {
