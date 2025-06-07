@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Docker build
-docker build -t agent_lambda_test_image .
+docker build --no-cache -t agent_lambda_test_image .
 
 # Docker run
 docker run \

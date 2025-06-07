@@ -24,7 +24,7 @@ def _build_type(value: Any, name: str = "Auto"):
         return GraphQLBoolean
     elif isinstance(value, int):
         return GraphQLInt
-    elif isinstance(value, float):
+    elif isinstance(value, float) or type(value).__name__ == 'Decimal':
         return GraphQLFloat
     else:
         return GraphQLString
