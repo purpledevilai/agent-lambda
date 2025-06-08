@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - staging
 
 jobs:
   deploy:
@@ -20,7 +21,12 @@ jobs:
         AWS_REGION: ${{ secrets.AWS_REGION }}
       run: |
         if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          FUNCTION_NAME="agent-lambda-function"
+          FUNCTION_NAME="prod-ajentify-api"
+        elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+          FUNCTION_NAME="staging-ajentify-api"
+        else
+          echo "Branch ${{ github.ref }} is not configured for deployment" >&2
+          exit 1
         fi
 
         cd src
