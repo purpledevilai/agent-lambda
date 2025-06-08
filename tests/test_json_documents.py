@@ -437,3 +437,106 @@ class TestJSONDocuments(unittest.TestCase):
 
         JSONDocument.delete_json_document(doc.document_id)
 
+    def test_public_document_operations(self):
+        # Set up - Create a public document with authentication
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create a public JSON document for testing
+        doc = JSONDocument.create_json_document(
+            JSONDocument.CreateJSONDocumentParams(
+                org_id=user.organizations[0],
+                is_public=True,  # Set document as public
+                data={
+                    "profile": {"first": "john"},
+                    "tags": ["personal"],
+                    "items": []
+                }
+            )
+        )
+
+        # 1. Set a value without authentication
+        set_request = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/set",
+            # No auth headers
+            body={"path": "profile.last", "value": "doe", "type": "string"}
+        )
+        set_response = lambda_handler(set_request, None)
+        self.assertEqual(set_response["statusCode"], 200)
+        set_body = json.loads(set_response["body"])
+        print("Public Set Response:", json.dumps(set_body, indent=2))
+        
+        # Verify the value was set
+        self.assertEqual(set_body["data"]["profile"]["last"], "doe")
+        
+        # 2. Add an item to a list without authentication
+        add_request = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/add",
+            # No auth headers
+            body={"path": "tags", "value": "public", "type": "string"}
+        )
+        add_response = lambda_handler(add_request, None)
+        self.assertEqual(add_response["statusCode"], 200)
+        add_body = json.loads(add_response["body"])
+        print("Public Add Response:", json.dumps(add_body, indent=2))
+        
+        # Verify item was added to the list
+        self.assertIn("public", add_body["data"]["tags"])
+        
+        # 3. Add a complex object to a list without authentication
+        add_obj_request = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/add",
+            # No auth headers
+            body={"path": "items", "value": json.dumps({"name": "Item 1", "quantity": 5}), "type": "json"}
+        )
+        add_obj_response = lambda_handler(add_obj_request, None)
+        self.assertEqual(add_obj_response["statusCode"], 200)
+        add_obj_body = json.loads(add_obj_response["body"])
+        print("Public Add Object Response:", json.dumps(add_obj_body, indent=2))
+        
+        # Verify complex object was added
+        self.assertEqual(add_obj_body["data"]["items"][0]["name"], "Item 1")
+        self.assertEqual(add_obj_body["data"]["items"][0]["quantity"], 5)
+        
+        # 4. Delete a value without authentication
+        delete_request = create_request(
+            method="POST",
+            path=f"/json-document/{doc.document_id}/delete",
+            # No auth headers
+            body={"path": "profile.first"}
+        )
+        delete_response = lambda_handler(delete_request, None)
+        self.assertEqual(delete_response["statusCode"], 200)
+        delete_body = json.loads(delete_response["body"])
+        print("Public Delete Response:", json.dumps(delete_body, indent=2))
+        
+        # Verify the value was deleted
+        self.assertNotIn("first", delete_body["data"]["profile"])
+        
+        # 5. Verify a private document rejects operations without auth
+        private_doc = JSONDocument.create_json_document(
+            JSONDocument.CreateJSONDocumentParams(
+                org_id=user.organizations[0],
+                is_public=False,  # Set document as private
+                data={"private": "data"}
+            )
+        )
+        
+        private_request = create_request(
+            method="POST",
+            path=f"/json-document/{private_doc.document_id}/set",
+            # No auth headers
+            body={"path": "new_field", "value": "test", "type": "string"}
+        )
+        private_response = lambda_handler(private_request, None)
+        
+        # Should get a 403 forbidden or 401 unauthorized
+        self.assertIn(private_response["statusCode"], [401, 403])
+        
+        # Clean up
+        JSONDocument.delete_json_document(doc.document_id)
+        JSONDocument.delete_json_document(private_doc.document_id)
+

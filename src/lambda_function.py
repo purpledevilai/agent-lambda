@@ -332,19 +332,19 @@ handler_registry = {
     "/json-document/{document_id}/set": {
         "POST": {
             "handler": set_json_value_handler,
-            "public": False
+            "public": True
         }
     },
     "/json-document/{document_id}/add": {
         "POST": {
             "handler": add_list_item_handler,
-            "public": False
+            "public": True
         }
     },
     "/json-document/{document_id}/delete": {
         "POST": {
             "handler": delete_value_handler,
-            "public": False
+            "public": True
         }
     },
     "/json-document/{document_id}/value": {
