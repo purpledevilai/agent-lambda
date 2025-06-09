@@ -60,6 +60,7 @@ class TestSRE(unittest.TestCase):
 
         self.assertEqual(result["name"], "Extract People")
         self.assertEqual(result["pd_id"], pd.pd_id)
+        self.assertEqual(result["prompt_template"], "{prompt}")
 
         # Clean up
         SRE.delete_sre(result["sre_id"])
@@ -110,18 +111,6 @@ class TestSRE(unittest.TestCase):
         # Check the response
         self.assertEqual(response["statusCode"], 200)
 
-        # Parse result
-        result = json.loads(response["body"])
-
-        self.assertEqual(result["name"], "Extract People")
-        self.assertEqual(result["pd_id"], pd.pd_id)
-
-        # Clean up
-        SRE.delete_sre(sre.sre_id)
-        ParameterDefinition.delete_parameter_definition(pd.pd_id)
-
-    def test_update_sre(self):
-        # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
         pd = ParameterDefinition.create_parameter_definition(
@@ -422,3 +411,132 @@ class TestSRE(unittest.TestCase):
         self.assertEqual(response["statusCode"], 200)
 
         
+
+    def test_run_sre_missing_argument(self):
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        pd = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "people",
+                    "description": "people",
+                    "type": "array",
+                    "parameters": [
+                        {
+                            "name": "name",
+                            "description": "name",
+                            "type": "string",
+                            "parameters": []
+                        }
+                    ]
+                }
+            ]
+        )
+
+        sre = SRE.create_sre(
+            org_id=user.organizations[0],
+            name="Extract_People",
+            description="Extracts people from a text",
+            pd_id=pd.pd_id,
+            prompt_template="Summarize {article}"
+        )
+
+        request = create_request(
+            method="POST",
+            path=f"/run-sre/{sre.sre_id}",
+            headers={"Authorization": access_token},
+            body={"prompt": "unused"}
+        )
+
+        response = lambda_handler(request, None)
+        self.assertEqual(response["statusCode"], 400)
+
+        ParameterDefinition.delete_parameter_definition(pd.pd_id)
+        SRE.delete_sre(sre.sre_id)
+
+    def test_run_sre_with_template_arguments(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        pd = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "summary",
+                    "description": "A summary of the article",
+                    "type": "string",
+                    "parameters": []
+                },
+                {
+                    "name": "topics",
+                    "description": "Main topics discussed in the article",
+                    "type": "array",
+                    "parameters": [
+                        {
+                            "name": "topic",
+                            "description": "A topic from the article",
+                            "type": "string",
+                            "parameters": []
+                        }
+                    ]
+                }
+            ]
+        )
+
+        # Create SRE with a template that uses multiple arguments
+        sre = SRE.create_sre(
+            org_id=user.organizations[0],
+            name="Article_Analyzer",
+            description="Analyzes an article and extracts summary and topics",
+            pd_id=pd.pd_id,
+            prompt_template="Please analyze the following article titled '{title}' written by {author}: {content}"
+        )
+
+        # Create request with all required template arguments
+        request = create_request(
+            method="POST",
+            path=f"/run-sre/{sre.sre_id}",
+            headers={"Authorization": access_token},
+            body={
+                "title": "The Future of AI",
+                "author": "Dr. Jane Smith",
+                "content": "Artificial intelligence continues to evolve rapidly. Recent advancements in machine learning have led to systems that can understand context better than ever before. Natural language processing has improved significantly, enabling more human-like interactions with AI systems. The ethical implications of these developments are profound and require careful consideration."
+            }
+        )
+
+        # Call the lambda handler
+        response = lambda_handler(request, None)
+        
+        # Check the response
+        self.assertEqual(response["statusCode"], 200)
+        
+        # Parse result
+        result = json.loads(response["body"])
+        print("Template SRE Response:", json.dumps(result, indent=2))
+        
+        # Verify the results contain the expected fields
+        self.assertIn("summary", result)
+        self.assertIn("topics", result)
+        self.assertGreater(len(result["topics"]), 0)
+        
+        # Test missing a required template argument
+        missing_arg_request = create_request(
+            method="POST",
+            path=f"/run-sre/{sre.sre_id}",
+            headers={"Authorization": access_token},
+            body={
+                "title": "The Future of AI",
+                # Missing "author" parameter
+                "content": "Artificial intelligence continues to evolve rapidly."
+            }
+        )
+        
+        missing_arg_response = lambda_handler(missing_arg_request, None)
+        self.assertEqual(missing_arg_response["statusCode"], 400)
+        error_body = json.loads(missing_arg_response["body"])
+        print("Error Response:", json.dumps(error_body, indent=2))
+        
+        # Clean up
+        SRE.delete_sre(sre.sre_id)
+        ParameterDefinition.delete_parameter_definition(pd.pd_id)
