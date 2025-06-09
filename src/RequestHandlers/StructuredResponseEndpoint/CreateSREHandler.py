@@ -10,7 +10,7 @@ def create_sre_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SRE.Stru
 
     # Parse and validate request body
     body = SRE.CreateSREParams(**json.loads(lambda_event.body))
-    
+
     # Default to first organization if org_id is not provided
     if body.org_id is None:
         body.org_id = dbUser.organizations[0]
@@ -27,6 +27,7 @@ def create_sre_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SRE.Stru
         description=body.description,
         pd_id=body.pd_id,
         is_public=body.is_public,
+        prompt_template=body.prompt_template,
     )
 
     return sre

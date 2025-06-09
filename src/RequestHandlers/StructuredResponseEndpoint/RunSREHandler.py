@@ -1,14 +1,12 @@
 import json
+import re
 from typing import Optional
 from LLM.LLMExtract import llm_extract
 from LLM.CreateLLM import create_llm
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import StructuredResponseEndpoint as SRE, User, ParameterDefinition
-from pydantic import BaseModel
 
-class RunSREParams(BaseModel):
-    prompt: str
 
 
 def run_sre_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
@@ -18,9 +16,8 @@ def run_sre_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
     if not sre_id:
         raise Exception("sre_id is required", 400)
 
-    # Extract the prompt from the request body
-    body = RunSREParams(**json.loads(lambda_event.body))
-    prompt = body.prompt
+    # Extract all arguments from the request body
+    body_dict = json.loads(lambda_event.body)
 
     # Get the SRE
     sre = None
@@ -29,6 +26,19 @@ def run_sre_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
         sre = SRE.get_sre_for_user(sre_id, dbUser)
     else:
         sre = SRE.get_public_sre(sre_id)
+
+    # Determine template, defaulting for legacy SREs
+    template = sre.prompt_template if sre.prompt_template else "{prompt}"
+    template_args = re.findall(r"{([^{}]+)}", template)
+
+    # Ensure required arguments are provided
+    for arg in template_args:
+        if arg not in body_dict:
+            raise Exception(f"Missing required argument: {arg}", 400)
+
+    # Inject arguments into template using same logic as AgentChat
+    safe_args = {k: str(body_dict[k]).replace("{", "{{").replace("}", "}}") for k in template_args}
+    prompt = template.format(**safe_args)
 
     # Get parameter definition from sre
     pd = ParameterDefinition.get_parameter_definition(sre.pd_id)
