@@ -46,8 +46,27 @@ def get_all_items_by_index(table_name: str, index_key: str, key_value: str) -> l
     :return: List of items matching the query
     """
     table = boto3.resource("dynamodb").Table(table_name)
-    response = table.query(
-        IndexName=index_key,
-        KeyConditionExpression=Key(index_key).eq(key_value)
-    )
-    return response['Items']
+    items = []
+    last_evaluated_key = None
+
+    while True:
+        if last_evaluated_key:
+            response = table.query(
+                IndexName=index_key,
+                KeyConditionExpression=Key(index_key).eq(key_value),
+                ExclusiveStartKey=last_evaluated_key
+            )
+        else:
+            response = table.query(
+                IndexName=index_key,
+                KeyConditionExpression=Key(index_key).eq(key_value)
+            )
+
+        items.extend(response.get('Items', []))
+
+        if 'LastEvaluatedKey' in response:
+            last_evaluated_key = response['LastEvaluatedKey']
+        else:
+            break
+
+    return items
