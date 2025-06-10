@@ -5,7 +5,13 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 
 from pydantic import BaseModel
-from AWS.DynamoDB import get_item, get_all_items_by_index, get_items_by_scan, put_item, delete_item
+from AWS.DynamoDB import (
+    get_item,
+    get_all_items_by_index,
+    get_items_by_scan,
+    put_item,
+    delete_item,
+)
 from AWS.CloudWatchLogs import get_logger
 from Models import User
 
@@ -16,27 +22,38 @@ DOCUMENTS_PRIMARY_KEY = os.environ["JSON_DOCUMENTS_PRIMARY_KEY"]  # likely "docu
 
 # --------------------- Models ---------------------
 
+
 class JSONDocument(BaseModel):
     document_id: str
+    name: str = "Untitled Document"
     data: Dict[str, Any]
     org_id: str
     created_at: int
     updated_at: int
     is_public: bool = False
 
+
 class CreateJSONDocumentParams(BaseModel):
+    name: str
     data: Dict[str, Any]
     org_id: Optional[str] = None
     is_public: Optional[bool] = False
 
+
 class UpdateJSONDocumentParams(BaseModel):
     data: Optional[Dict[str, Any]] = None
     is_public: Optional[bool] = None
+    name: Optional[str] = None
+
 
 # --------------------- CRUD Functions ---------------------
 
+
 def json_document_exists(document_id: str) -> bool:
-    return get_item(DOCUMENTS_TABLE_NAME, DOCUMENTS_PRIMARY_KEY, document_id) is not None
+    return (
+        get_item(DOCUMENTS_TABLE_NAME, DOCUMENTS_PRIMARY_KEY, document_id) is not None
+    )
+
 
 def create_json_document(params: CreateJSONDocumentParams) -> JSONDocument:
     if params.org_id is None:
@@ -44,21 +61,27 @@ def create_json_document(params: CreateJSONDocumentParams) -> JSONDocument:
     now = int(datetime.timestamp(datetime.now()))
     document_data = {
         DOCUMENTS_PRIMARY_KEY: str(uuid.uuid4()),
+        "name": params.name,
         "data": params.data,
         "org_id": params.org_id,
         "is_public": params.is_public,
         "created_at": now,
-        "updated_at": now
+        "updated_at": now,
     }
     document = JSONDocument(**document_data)
     put_item(DOCUMENTS_TABLE_NAME, document_data)
     return document
 
+
 def get_json_document(document_id: str) -> JSONDocument:
     item = get_item(DOCUMENTS_TABLE_NAME, DOCUMENTS_PRIMARY_KEY, document_id)
     if item is None:
         raise Exception(f"JSONDocument with id: {document_id} does not exist", 404)
+    if "name" not in item or item["name"] is None:
+        item["name"] = f"Document {item[DOCUMENTS_PRIMARY_KEY]}"
+        put_item(DOCUMENTS_TABLE_NAME, item)
     return JSONDocument(**item)
+
 
 def get_public_json_document(document_id: str) -> JSONDocument:
     document = get_json_document(document_id)
@@ -66,12 +89,15 @@ def get_public_json_document(document_id: str) -> JSONDocument:
         return document
     raise Exception(f"Document is not public", 403)
 
+
 def save_json_document(document: JSONDocument) -> None:
     document.updated_at = int(datetime.timestamp(datetime.now()))
     put_item(DOCUMENTS_TABLE_NAME, document.model_dump())
 
+
 def delete_json_document(document_id: str) -> None:
     delete_item(DOCUMENTS_TABLE_NAME, DOCUMENTS_PRIMARY_KEY, document_id)
+
 
 def get_json_document_for_user(document_id: str, user: User.User) -> JSONDocument:
     doc = get_json_document(document_id)
@@ -81,29 +107,38 @@ def get_json_document_for_user(document_id: str, user: User.User) -> JSONDocumen
         return doc
     raise Exception(f"Document does not belong to user's orgs", 403)
 
+
 def parse_json_document_items(items: list[dict]) -> list[JSONDocument]:
     documents = []
     for item in items:
         try:
+            if "name" not in item or item["name"] is None:
+                item["name"] = f"Document {item[DOCUMENTS_PRIMARY_KEY]}"
+                put_item(DOCUMENTS_TABLE_NAME, item)
             documents.append(JSONDocument(**item))
         except Exception as e:
             logger.error(f"Error parsing document: {e}")
     return documents
 
+
 def get_json_documents_from_ids(document_ids: list[str]) -> list[JSONDocument]:
     items = get_items_by_scan(DOCUMENTS_TABLE_NAME, DOCUMENTS_PRIMARY_KEY, document_ids)
     return parse_json_document_items(items)
 
+
 def get_json_documents_in_org(org_id: str) -> list[JSONDocument]:
     items = get_all_items_by_index(DOCUMENTS_TABLE_NAME, "org_id", org_id)
     return parse_json_document_items(items)
+
 
 def delete_json_documents_in_org(org_id: str) -> None:
     documents = get_json_documents_in_org(org_id)
     for doc in documents:
         delete_json_document(doc.document_id)
 
+
 # --------------------- Data Helpers ---------------------
+
 
 def _parse_value(value: str, value_type: str):
     """Parse a string value into the correct python type."""
@@ -178,7 +213,7 @@ def _infer_shape(value: Any):
         return "null"
     if isinstance(value, bool):
         return "boolean"
-    if isinstance(value, (int, float)) or type(value).__name__ == 'Decimal':
+    if isinstance(value, (int, float)) or type(value).__name__ == "Decimal":
         return "number"
     if isinstance(value, str):
         return "string"
@@ -212,8 +247,15 @@ def _infer_shape(value: Any):
 
 # --------------------- Extended Functions ---------------------
 
-def set_value(document_id: str, path: str, value: str, type: str, user: Optional[User.User] = None) -> JSONDocument:
-    document = get_json_document_for_user(document_id, user) if user else get_public_json_document(document_id)
+
+def set_value(
+    document_id: str, path: str, value: str, type: str, user: Optional[User.User] = None
+) -> JSONDocument:
+    document = (
+        get_json_document_for_user(document_id, user)
+        if user
+        else get_public_json_document(document_id)
+    )
     parsed = _parse_value(value, type)
     parent, last = _navigate_to_parent(document.data, path.split("."), True)
     if last.isdigit():
@@ -231,8 +273,14 @@ def set_value(document_id: str, path: str, value: str, type: str, user: Optional
     return document
 
 
-def add_list_item(document_id: str, path: str, value: str, type: str, user: Optional[User.User] = None) -> JSONDocument:
-    document = get_json_document_for_user(document_id, user) if user else get_public_json_document(document_id)
+def add_list_item(
+    document_id: str, path: str, value: str, type: str, user: Optional[User.User] = None
+) -> JSONDocument:
+    document = (
+        get_json_document_for_user(document_id, user)
+        if user
+        else get_public_json_document(document_id)
+    )
     parsed = _parse_value(value, type)
     parent, last = _navigate_to_parent(document.data, path.split("."), True)
     if last.isdigit():
@@ -255,8 +303,14 @@ def add_list_item(document_id: str, path: str, value: str, type: str, user: Opti
     return document
 
 
-def delete(document_id: str, path: str, user: Optional[User.User] = None) -> JSONDocument:
-    document = get_json_document_for_user(document_id, user) if user else get_public_json_document(document_id)
+def delete(
+    document_id: str, path: str, user: Optional[User.User] = None
+) -> JSONDocument:
+    document = (
+        get_json_document_for_user(document_id, user)
+        if user
+        else get_public_json_document(document_id)
+    )
     parent, last = _navigate_to_parent(document.data, path.split("."), False)
     if last.isdigit():
         idx = int(last)
@@ -276,11 +330,19 @@ def delete(document_id: str, path: str, user: Optional[User.User] = None) -> JSO
 
 
 def get(document_id: str, path: str, user: Optional[User.User] = None):
-    document = get_json_document_for_user(document_id, user) if user else get_public_json_document(document_id)
+    document = (
+        get_json_document_for_user(document_id, user)
+        if user
+        else get_public_json_document(document_id)
+    )
     value = _resolve_path(document.data, path.split("."))
     return value
 
 
 def get_shape(document_id: str, user: Optional[User.User] = None) -> Dict[str, Any]:
-    document = get_json_document_for_user(document_id, user) if user else get_public_json_document(document_id)
+    document = (
+        get_json_document_for_user(document_id, user)
+        if user
+        else get_public_json_document(document_id)
+    )
     return _infer_shape(document.data)
