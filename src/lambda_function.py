@@ -92,6 +92,13 @@ from RequestHandlers.Integration.GetIntegrationHandler import get_integration_ha
 from RequestHandlers.Integration.UpdateIntegrationHandler import update_integration_handler
 from RequestHandlers.Integration.DeleteIntegrationHandler import delete_integration_handler
 from RequestHandlers.Integration.GetIntegrationsHandler import get_integrations_handler
+from RequestHandlers.Jira.JiraHandlers import (
+    jira_auth_code_handler,
+    jira_projects_handler,
+    jira_create_issue_handler,
+    jira_get_issues_handler,
+    jira_update_issue_handler,
+)
 
 
 
@@ -339,6 +346,34 @@ handler_registry = {
     "/integrations": {
         "GET": {
             "handler": get_integrations_handler,
+            "public": False
+        }
+    },
+    "/jira-auth-code": {
+        "POST": {
+            "handler": jira_auth_code_handler,
+            "public": False
+        }
+    },
+    "/jira/projects": {
+        "GET": {
+            "handler": jira_projects_handler,
+            "public": False
+        }
+    },
+    "/jira/issues": {
+        "GET": {
+            "handler": jira_get_issues_handler,
+            "public": False
+        },
+        "POST": {
+            "handler": jira_create_issue_handler,
+            "public": False
+        }
+    },
+    "/jira/issues/{issue_id}": {
+        "POST": {
+            "handler": jira_update_issue_handler,
             "public": False
         }
     },
