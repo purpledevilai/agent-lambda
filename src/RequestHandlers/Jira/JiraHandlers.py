@@ -28,7 +28,11 @@ def jira_auth_code_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Inte
     db_user = User.get_user(user.sub)
     if len(db_user.organizations) == 0:
         raise Exception("User is not a member of any organizations", 400)
-    org_id = db_user.organizations[0]
+    org_id = lambda_event.queryStringParameters.get("org_id")
+    if not org_id:
+        org_id = db_user.organizations[0]
+    if org_id not in [org_id for org_id in db_user.organizations]:
+        raise Exception("User is not a member of the specified organization", 403)
 
     payload = {
         "grant_type": "authorization_code",
