@@ -85,3 +85,30 @@ def search_issues(user: User.User, jql: str | None = None):
 
 def update_issue(user: User.User, issue_id: str, data: dict):
     return jira_api_request(user, "PUT", f"/rest/api/3/issue/{issue_id}", json=data)
+
+
+def transition_issue(user: User.User, issue_id: str, transition_id: str):
+    data = {"transition": {"id": transition_id}}
+    return jira_api_request(
+        user,
+        "POST",
+        f"/rest/api/3/issue/{issue_id}/transitions",
+        json=data,
+    )
+
+
+def assign_issue(user: User.User, issue_id: str, account_id: str):
+    data = {"accountId": account_id}
+    return jira_api_request(user, "PUT", f"/rest/api/3/issue/{issue_id}/assignee", json=data)
+
+
+def unassign_issue(user: User.User, issue_id: str):
+    return jira_api_request(user, "DELETE", f"/rest/api/3/issue/{issue_id}/assignee")
+
+
+def list_sprints(user: User.User, board_id: str):
+    return jira_api_request(user, "GET", f"/rest/agile/1.0/board/{board_id}/sprint")
+
+
+def get_sprint_issues(user: User.User, sprint_id: str):
+    return jira_api_request(user, "GET", f"/rest/agile/1.0/sprint/{sprint_id}/issue")
