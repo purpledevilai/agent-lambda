@@ -70,3 +70,31 @@ def get_all_items_by_index(table_name: str, index_key: str, key_value: str) -> l
             break
 
     return items
+
+def get_latest_items_by_index(
+    table_name: str,
+    index_name: str,
+    index_key: str,
+    index_value: str,
+    limit: int
+) -> list[dict]:
+    """
+    Get the latest N items from a DynamoDB table using a GSI with a partition key and a timestamp sort key.
+
+    :param table_name: Name of the DynamoDB table
+    :param index_name: Name of the GSI to use
+    :param index_key: Partition key name for the index (e.g., 'org_id')
+    :param index_value: Partition key value to query
+    :param limit: Max number of items to return
+    :return: List of matching items (sorted descending by timestamp)
+    """
+    table = boto3.resource("dynamodb").Table(table_name)
+
+    response = table.query(
+        IndexName=index_name,
+        KeyConditionExpression=Key(index_key).eq(index_value),
+        ScanIndexForward=False,  # Get latest first
+        Limit=limit
+    )
+
+    return response.get("Items", [])

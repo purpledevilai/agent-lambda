@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 import uuid
-from AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item
+from AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item, get_latest_items_by_index
 from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union
@@ -103,7 +103,7 @@ def save_context(context: Context) -> None:
     put_item(CONTEXTS_TABLE_NAME, context.model_dump())
 
 def get_contexts_by_user_id(user_id: str) -> list[Context]:
-    items = get_all_items_by_index(CONTEXTS_TABLE_NAME, "user_id", user_id)
+    items = get_latest_items_by_index(CONTEXTS_TABLE_NAME, "user_id-updated_at-index", "user_id", user_id, 50)
     contexts = []
     for item in items:
         try:

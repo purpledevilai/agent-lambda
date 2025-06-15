@@ -218,6 +218,8 @@ class TestContext(unittest.TestCase):
 
         res_body = json.loads(result["body"])
 
+        print("Context History Length: ", len(res_body["contexts"]))
+        print("Last Context: ", res_body["contexts"][0])
         self.assertGreaterEqual(len(res_body["contexts"]), 1)
 
         # Clean up
