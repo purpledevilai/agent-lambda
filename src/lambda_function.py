@@ -86,6 +86,20 @@ from RequestHandlers.JSONDocument.DeleteValueHandler import delete_value_handler
 from RequestHandlers.JSONDocument.GetValueHandler import get_value_handler
 from RequestHandlers.JSONDocument.GetSchema import get_schema_handler
 
+# Integrations
+from RequestHandlers.Integration.CreateIntegrationHandler import create_integration_handler
+from RequestHandlers.Integration.GetIntegrationHandler import get_integration_handler
+from RequestHandlers.Integration.UpdateIntegrationHandler import update_integration_handler
+from RequestHandlers.Integration.DeleteIntegrationHandler import delete_integration_handler
+from RequestHandlers.Integration.GetIntegrationsHandler import get_integrations_handler
+from RequestHandlers.Jira.JiraHandlers import (
+    jira_auth_code_handler,
+    jira_projects_handler,
+    jira_create_issue_handler,
+    jira_get_issues_handler,
+    jira_update_issue_handler,
+)
+
 
 
 
@@ -307,6 +321,60 @@ handler_registry = {
         "POST": {
             "handler": run_sre_handler,
             "public": True
+        }
+    },
+    "/integration": {
+        "POST": {
+            "handler": create_integration_handler,
+            "public": False
+        }
+    },
+    "/integration/{integration_id}": {
+        "GET": {
+            "handler": get_integration_handler,
+            "public": False
+        },
+        "POST": {
+            "handler": update_integration_handler,
+            "public": False
+        },
+        "DELETE": {
+            "handler": delete_integration_handler,
+            "public": False
+        }
+    },
+    "/integrations": {
+        "GET": {
+            "handler": get_integrations_handler,
+            "public": False
+        }
+    },
+    "/jira-auth-code": {
+        "POST": {
+            "handler": jira_auth_code_handler,
+            "public": False
+        }
+    },
+    "/jira/projects": {
+        "GET": {
+            "handler": jira_projects_handler,
+            "public": False
+        }
+    },
+    "/jira/issues": {
+        "GET": {
+            "handler": jira_get_issues_handler,
+            "public": False
+        },
+        "POST": {
+            "handler": jira_create_issue_handler,
+            "public": False
+        }
+    },
+    "/jira/issues/{issue_id}": {
+        "POST": {
+            "handler": jira_update_issue_handler,
+            "public": False
         }
     },
    "/json-document": {
