@@ -430,6 +430,10 @@ const sayHello(name: string) {
         self.assertEqual(context.messages[0]["type"], "ai")
         self.assertEqual(context.messages[1]["type"], "tool")
 
+        # Get context with tool messages
+        filtered_context = Context.transform_to_filtered_context(context, show_tool_calls=True)
+        print(json.dumps(filtered_context.model_dump(), indent=4))
+
         Context.delete_context(context.context_id)
         Agent.delete_agent(agent.agent_id)
         Tool.delete_tool(tool.tool_id)

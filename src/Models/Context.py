@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Union
 from Models import Agent, Tool
 from langchain_core.messages import AIMessage, ToolMessage
+from LLM.BaseMessagesConverter import base_messages_to_dict_messages
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -83,21 +84,19 @@ def create_context(agent_id: str, user_id: Optional[str] = None, prompt_args: Op
             tool = Tool.get_agent_tool_with_id(agent.initialize_tool_id)
             if len(tool.params.model_fields) > 0:
                 raise Exception("Initialization tool cannot have parameters")
+            
+            initialization_messages = []
 
             tool_call_id = str(uuid.uuid4())
             ai_message = AIMessage(
                 content="",
-                additional_kwargs={
-                    "tool_calls": [
-                        {
-                            "id": tool_call_id,
-                            "name": tool.params.__name__,
-                            "args": {}
-                        }
-                    ]
-                }
+                tool_calls=[{
+                    "id": tool_call_id,
+                    "name": tool.params.__name__,
+                    "args": {}
+                }]
             )
-            context.messages.append(ai_message.model_dump())
+            initialization_messages.append(ai_message)
 
             try:
                 if tool.pass_context:
@@ -105,7 +104,8 @@ def create_context(agent_id: str, user_id: Optional[str] = None, prompt_args: Op
                 else:
                     result = tool.function()
                 tool_message = ToolMessage(tool_call_id=tool_call_id, content=result)
-                context.messages.append(tool_message.model_dump())
+                initialization_messages.append(tool_message)
+                context.messages = base_messages_to_dict_messages(initialization_messages)
             except Exception as e:
                 logger.error(f"Error running initialization tool {agent.initialize_tool_id}: {e}")
                 error_message = AIMessage(content=f"Initialization tool failed: {e}")
