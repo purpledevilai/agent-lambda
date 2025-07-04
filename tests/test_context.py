@@ -6,7 +6,7 @@ from tests.helper_funcs import create_request
 from tests.config import access_token, agent_id_outside_of_org
 from src.lambda_function import lambda_handler
 # Import for test
-from src.Models import Context, Agent, User
+from src.Models import Context, Agent, User, Tool
 from src.AWS import Cognito
 
 
@@ -402,4 +402,35 @@ const sayHello(name: string) {
 
         # Print result
         print(json.dumps(res_body, indent=4))
+
+    def test_create_context_with_initialization_tool(self):
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="init_tool",
+            description="initialize context",
+            code="def init_tool():\n  return 'initialized'"
+        )
+
+        agent = Agent.create_agent(
+            agent_name="init-agent",
+            agent_description="agent with init tool",
+            prompt="hello",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            initialize_tool_id=tool.tool_id
+        )
+
+        context = Context.create_context(agent.agent_id, cognito_user.sub)
+
+        self.assertTrue(len(context.messages) >= 2)
+        self.assertEqual(context.messages[0]["type"], "ai")
+        self.assertEqual(context.messages[1]["type"], "tool")
+
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(tool.tool_id)
 

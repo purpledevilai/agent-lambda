@@ -5,7 +5,8 @@ from AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item
 from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union
-from Models import Agent
+from Models import Agent, Tool
+from langchain_core.messages import AIMessage, ToolMessage
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -73,8 +74,46 @@ def create_context(agent_id: str, user_id: Optional[str] = None, prompt_args: Op
         "created_at": int(datetime.timestamp(datetime.now())),
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
+
     context = Context(**contextData)
-    put_item(CONTEXTS_TABLE_NAME, contextData)
+
+    try:
+        agent = Agent.get_agent(agent_id)
+        if agent.initialize_tool_id:
+            tool = Tool.get_agent_tool_with_id(agent.initialize_tool_id)
+            if len(tool.params.model_fields) > 0:
+                raise Exception("Initialization tool cannot have parameters")
+
+            tool_call_id = str(uuid.uuid4())
+            ai_message = AIMessage(
+                content="",
+                additional_kwargs={
+                    "tool_calls": [
+                        {
+                            "id": tool_call_id,
+                            "name": tool.params.__name__,
+                            "args": {}
+                        }
+                    ]
+                }
+            )
+            context.messages.append(ai_message.model_dump())
+
+            try:
+                if tool.pass_context:
+                    result = tool.function(context=context.model_dump())
+                else:
+                    result = tool.function()
+                tool_message = ToolMessage(tool_call_id=tool_call_id, content=result)
+                context.messages.append(tool_message.model_dump())
+            except Exception as e:
+                logger.error(f"Error running initialization tool {agent.initialize_tool_id}: {e}")
+                error_message = AIMessage(content=f"Initialization tool failed: {e}")
+                context.messages.append(error_message.model_dump())
+    except Exception as e:
+        logger.error(f"Initialization error: {e}")
+
+    put_item(CONTEXTS_TABLE_NAME, context.model_dump())
     return context
 
 
