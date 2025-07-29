@@ -6,7 +6,7 @@ from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union
 from Models import Agent, Tool
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, ToolMessage, SystemMessage
 from LLM.BaseMessagesConverter import base_messages_to_dict_messages
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
@@ -162,7 +162,7 @@ def delete_all_contexts_for_user(user_id: str) -> None:
 def transform_to_filtered_context(context: Context, show_tool_calls: bool = False) -> FilteredContext:
     messages = []
     for message in context.messages:
-        if (message["type"] == "human" or (message["type"] == "ai" and message["content"])):
+        if (message["type"] == "human" or (message["type"] == "ai" and message["content"]) or message["type"] == "system"):
                 messages.append(FilteredMessage(**{
                     "sender": message["type"],
                     "message": message["content"]
@@ -203,6 +203,16 @@ def transform_to_history_context(context: Context, agent: Agent.Agent) -> Histor
         "updated_at": context.updated_at,
         "agent": Agent.transform_to_history_agent(agent)
     })
+
+def add_ai_message(context: Context, message: str) -> Context:
+    context.messages.extend(base_messages_to_dict_messages([AIMessage(content=message)]))
+    save_context(context)
+    return context
+
+def add_system_message(context: Context, message: str) -> Context:
+    context.messages.extend(base_messages_to_dict_messages([SystemMessage(content=message)]))
+    save_context(context)
+    return context
 
 
     

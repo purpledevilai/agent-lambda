@@ -8,6 +8,9 @@ from src.lambda_function import lambda_handler
 # Import for test
 from src.Models import Context, Agent, User, Tool
 from src.AWS import Cognito
+from src.LLM.AgentChat import AgentChat
+from src.LLM.CreateLLM import create_llm
+from src.LLM.BaseMessagesConverter import base_messages_to_dict_messages, dict_messages_to_base_messages
 
 
 class TestContext(unittest.TestCase):
@@ -437,4 +440,71 @@ const sayHello(name: string) {
         Context.delete_context(context.context_id)
         Agent.delete_agent(agent.agent_id)
         Tool.delete_tool(tool.tool_id)
+
+    def test_get_context_with_system_messages(self):
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        agent = Agent.create_agent(
+            agent_name="test-agent",
+            agent_description="test agent",
+            prompt="You are a flight assistant.",
+            org_id=user.organizations[0],
+            agent_speaks_first=False,
+            is_public=False
+        )
+
+        context = Context.create_context(agent.agent_id, cognito_user.sub)
+
+        # Create the AgentChat
+        agent_chat = AgentChat(
+            llm=create_llm(),
+            prompt=agent.prompt,
+            messages=context.messages,
+            tools=[],
+            context=context.model_dump()
+        )
+
+        # Add human message
+        agent_chat.add_human_message_and_invoke("What is the flight status for flight AA123? And where is it going?")
+        # Save the context after adding the human message
+        context.messages = base_messages_to_dict_messages(agent_chat.messages)
+
+        # Add a system message
+        context = Context.add_system_message(context, "Sell them possible bike tours in the destination of the flight.")
+
+        # Create the agent chat again with the updated context
+        agent_chat = AgentChat(
+            llm=create_llm(),
+            prompt=agent.prompt,
+            messages=dict_messages_to_base_messages(context.messages),
+            tools=[],
+            context=context.model_dump()
+        )
+
+        # Invoke the agent chat
+        agent_chat.invoke()
+        # Save the context after invoking the agent chat
+        context.messages = base_messages_to_dict_messages(agent_chat.messages)
+        Context.save_context(context)
+
+        # Get the context with system messages
+        request = create_request(
+            method="GET",
+            path=f"/context/{context.context_id}",
+            headers={
+                "Authorization": access_token
+            },
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+        print(json.dumps(res_body, indent=4))
+        self.assertTrue(any(msg["sender"] == "system" for msg in res_body["messages"]))
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
 

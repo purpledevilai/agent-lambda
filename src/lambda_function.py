@@ -31,6 +31,7 @@ from RequestHandlers.Agent.DeleteAgentHandler import delete_agent_handler
 
 # Chat
 from RequestHandlers.Chat.ChatHandler import chat_handler
+from RequestHandlers.Chat.AddAIMessageHandler import add_ai_message_handler
 
 # Chatpage
 from RequestHandlers.ChatPage.CreateChatPageHandler import create_chat_page_handler
@@ -179,6 +180,12 @@ handler_registry = {
     "/chat": {
         "POST": {
             "handler": chat_handler,
+            "public": True
+        }
+    },
+    "/chat/add-ai-message": {
+        "POST": {
+            "handler": add_ai_message_handler,
             "public": True
         }
     },
