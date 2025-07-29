@@ -5,7 +5,9 @@ from AWS.DynamoDB import get_item, put_item, get_all_items_by_index, delete_item
 from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union
-from Models import Agent
+from Models import Agent, Tool
+from langchain_core.messages import AIMessage, ToolMessage, SystemMessage
+from LLM.BaseMessagesConverter import base_messages_to_dict_messages
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -73,8 +75,45 @@ def create_context(agent_id: str, user_id: Optional[str] = None, prompt_args: Op
         "created_at": int(datetime.timestamp(datetime.now())),
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
+
     context = Context(**contextData)
-    put_item(CONTEXTS_TABLE_NAME, contextData)
+
+    try:
+        agent = Agent.get_agent(agent_id)
+        if agent.initialize_tool_id:
+            tool = Tool.get_agent_tool_with_id(agent.initialize_tool_id)
+            if len(tool.params.model_fields) > 0:
+                raise Exception("Initialization tool cannot have parameters")
+            
+            initialization_messages = []
+
+            tool_call_id = str(uuid.uuid4())
+            ai_message = AIMessage(
+                content="",
+                tool_calls=[{
+                    "id": tool_call_id,
+                    "name": tool.params.__name__,
+                    "args": {}
+                }]
+            )
+            initialization_messages.append(ai_message)
+
+            try:
+                if tool.pass_context:
+                    result = tool.function(context=context.model_dump())
+                else:
+                    result = tool.function()
+                tool_message = ToolMessage(tool_call_id=tool_call_id, content=result)
+                initialization_messages.append(tool_message)
+                context.messages = base_messages_to_dict_messages(initialization_messages)
+            except Exception as e:
+                logger.error(f"Error running initialization tool {agent.initialize_tool_id}: {e}")
+                error_message = AIMessage(content=f"Initialization tool failed: {e}")
+                context.messages.append(error_message.model_dump())
+    except Exception as e:
+        logger.error(f"Initialization error: {e}")
+
+    put_item(CONTEXTS_TABLE_NAME, context.model_dump())
     return context
 
 
@@ -123,7 +162,7 @@ def delete_all_contexts_for_user(user_id: str) -> None:
 def transform_to_filtered_context(context: Context, show_tool_calls: bool = False) -> FilteredContext:
     messages = []
     for message in context.messages:
-        if (message["type"] == "human" or (message["type"] == "ai" and message["content"])):
+        if (message["type"] == "human" or (message["type"] == "ai" and message["content"]) or message["type"] == "system"):
                 messages.append(FilteredMessage(**{
                     "sender": message["type"],
                     "message": message["content"]
@@ -164,6 +203,16 @@ def transform_to_history_context(context: Context, agent: Agent.Agent) -> Histor
         "updated_at": context.updated_at,
         "agent": Agent.transform_to_history_agent(agent)
     })
+
+def add_ai_message(context: Context, message: str) -> Context:
+    context.messages.extend(base_messages_to_dict_messages([AIMessage(content=message)]))
+    save_context(context)
+    return context
+
+def add_system_message(context: Context, message: str) -> Context:
+    context.messages.extend(base_messages_to_dict_messages([SystemMessage(content=message)]))
+    save_context(context)
+    return context
 
 
     
