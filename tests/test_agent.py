@@ -482,6 +482,68 @@ class TestAgent(unittest.TestCase):
         Tool.delete_tool(tool.tool_id)
         Agent.delete_agent(agent.agent_id)
         Context.delete_context(context.context_id)
+
+    def test_agent_with_tool_with_passed_context(self):
+
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create tool
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="get_context",
+            description="Returns the context",
+            code="def get_context(context):\n  return json.dumps(context)",
+            pd_id=None,  # No parameters needed for this tool
+            pass_context=True
+        )
+
+        # Create agent
+        agent: Agent.Agent = Agent.create_agent(
+            agent_name="Context Agent",
+            agent_description="Can return the context passed to it",
+            prompt="When the user asks for the context, call the get_context tool and return the exact contents of it",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[
+                tool.tool_id
+            ]
+        )
+
+        # Create context
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id,
+        )
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Hello! What's the context?"
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda function
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        self.assertIn("response", response)
+        print(response)
+
+        # Clean up
+        Tool.delete_tool(tool.tool_id)
+        Agent.delete_agent(agent.agent_id)
+        Context.delete_context(context.context_id)
     
 
     

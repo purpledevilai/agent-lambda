@@ -557,6 +557,37 @@ def try_aws_access():
         # Clean up
         Tool.delete_tool(tool.tool_id)
         Agent.delete_agent(agent.agent_id)
+
+    def test_create_tool_with_pass_context(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create the request
+        request = create_request(
+            method="POST",
+            path="/tool",
+            headers={
+                "Authorization": access_token
+            },
+            body={
+                "name": "Context Tool",
+                "description": "Returns user id",
+                "code": "def context_tool(context):\n  return context['user_id']",
+                "pass_context": True,
+            }
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        body = json.loads(result["body"])
+        self.assertTrue(body["pass_context"])
+
+        # Clean up
+        Tool.delete_tool(body["tool_id"])
         
 
 
