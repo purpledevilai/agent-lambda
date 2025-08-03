@@ -22,11 +22,13 @@ class Context(BaseModel):
     created_at: int
     updated_at: int
     prompt_args: Optional[dict] = None
+    user_defined: Optional[dict] = None
 
 class CreateContextParams(BaseModel):
     agent_id: str
     invoke_agent_message: Optional[bool] = False
     prompt_args: Optional[dict] = None
+    user_defined: Optional[dict] = None
 
 class FilteredMessage(BaseModel):
     sender: str
@@ -50,6 +52,7 @@ class FilteredContext(BaseModel):
     agent_id: str
     user_id: str
     messages: List[MessageType]
+    user_defined: Optional[dict] = None
     created_at: int
     updated_at: int
 
@@ -65,13 +68,19 @@ class HistoryContext(BaseModel):
 def context_exists(context_id: str) -> bool:
     return get_item(CONTEXTS_TABLE_NAME, CONTEXTS_PRIMARY_KEY, context_id) != None
     
-def create_context(agent_id: str, user_id: Optional[str] = None, prompt_args: Optional[dict] = None) -> Context:
+def create_context(
+        agent_id: str,
+        user_id: Optional[str] = None,
+        prompt_args: Optional[dict] = None,
+        user_defined: Optional[dict] = None
+    ) -> Context:
     contextData = {
         CONTEXTS_PRIMARY_KEY: str(uuid.uuid4()),
         "agent_id": agent_id,
         "user_id": user_id if user_id is not None else "public",
         "messages": [],
         "prompt_args": prompt_args,
+        "user_defined": user_defined,
         "created_at": int(datetime.timestamp(datetime.now())),
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
@@ -189,6 +198,7 @@ def transform_to_filtered_context(context: Context, show_tool_calls: bool = Fals
         "agent_id": context.agent_id,
         "user_id": context.user_id,
         "messages": messages,
+        "user_defined": context.user_defined if context.user_defined else {},
         "created_at": context.created_at,
         "updated_at": context.updated_at
     })

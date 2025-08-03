@@ -508,3 +508,46 @@ const sayHello(name: string) {
         Context.delete_context(context.context_id)
         Agent.delete_agent(agent.agent_id)
 
+    def test_create_context_with_user_defined_data(self):
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            agent_name="test-agent",
+            agent_description="agent with user defined data",
+            prompt="You are a helpful assistant.",
+            org_id=user.organizations[0],
+            agent_speaks_first=False,
+            is_public=False
+        )
+
+        # body
+        body = {
+            "agent_id": agent.agent_id,
+            "user_defined": {
+                "name": "Alice"
+            }
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={
+                "Authorization": access_token
+            },
+            body=body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        res_body = json.loads(result["body"])
+        print(json.dumps(res_body, indent=4))
+
+        # Clean up 
+        Context.delete_context(res_body["context_id"])
+        Agent.delete_agent(agent.agent_id)
+
