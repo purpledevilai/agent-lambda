@@ -26,6 +26,7 @@ def create_tool_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Tool.To
         description=body.description,
         pd_id=body.pd_id,
         code=body.code,
+        pass_context=body.pass_context
     )
 
     return tool

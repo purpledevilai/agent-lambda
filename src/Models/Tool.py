@@ -23,6 +23,7 @@ class Tool(BaseModel):
     # Parameter Definition ID, can have no parameters
     pd_id: Optional[str] = None
     code: Optional[str] = None
+    pass_context: bool = False
     created_at: int
     updated_at: int
 
@@ -33,6 +34,7 @@ class CreateToolParams(BaseModel):
     description: str
     pd_id: Optional[str] = None
     code: str
+    pass_context: bool = False
 
 
 class UpdateToolParams(BaseModel):
@@ -40,6 +42,7 @@ class UpdateToolParams(BaseModel):
     description: Optional[str] = None
     pd_id: Optional[str] = None
     code: Optional[str] = None
+    pass_context: Optional[bool] = None
 
 
 def tool_exists(tool_id: str) -> bool:
@@ -52,6 +55,7 @@ def create_tool(
     description: str,
     code: str,
     pd_id: Optional[str] = None,  # Parameter Definition ID
+    pass_context: bool = False
 ) -> Tool:
     tool_id = str(uuid.uuid4())
     created_at = int(datetime.now().timestamp())
@@ -63,6 +67,7 @@ def create_tool(
         description=description,
         pd_id=pd_id,
         code=code,
+        pass_context=pass_context,
         created_at=created_at,
         updated_at=updated_at
     )
@@ -105,7 +110,7 @@ def get_agent_tool_with_id(tool_id: str) -> AgentTool:
             invokation_type="RequestResponse"
         )
         return response["result"]
-    return AgentTool(params=params, function=custom_code_lambda_invoke, pass_context=False)
+    return AgentTool(params=params, function=custom_code_lambda_invoke, pass_context=tool.pass_context)
 
 
 def get_tool_for_user(tool_id: str, user: User.User) -> Tool:
