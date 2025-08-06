@@ -21,6 +21,7 @@ def update_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.
 
     # Update the agent
     update_dict = {k: v for k, v in body.model_dump().items() if v is not None}
+    update_dict["initialize_tool_id"] = body.initialize_tool_id # Explicitly set initialize_tool_id if it is None
     agent_dict = agent.model_dump()
     agent_dict.update(update_dict)
     if agent_dict.get("tools"):
