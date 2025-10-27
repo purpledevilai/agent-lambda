@@ -35,8 +35,12 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
     if body.message:
         # Add it as an AI message to the context
         Context.add_ai_message(context=context, message=body.message)
-        # Return the message
-        return Chat.ChatResponse(response=body.message)
+        # Return the message - no generated messages since we're just adding a pre-written message
+        return Chat.ChatResponse(
+            response=body.message,
+            saved_messages=True,
+            generated_messages=[]
+        )
     
     # Otherwise, if prompt is provided, append it to the agent's prompt
     if not body.prompt:
@@ -47,6 +51,9 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
     # Context dict for context updates
     context_dict = context.model_dump()
 
+    # Capture the number of messages before generation
+    messages_before_count = len(context.messages)
+
     # Create the agent chat
     agent_chat = AgentChat(
         llm=create_llm(),
@@ -56,15 +63,34 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
         context=context_dict
     )
 
-    # Add the human message and invoke the agent
+    # Invoke the agent (no human message added)
     agent_response = agent_chat.invoke()
 
-    # Initialize the response
-    response = Chat.ChatResponse(response=agent_response)
+    # Convert all messages to dict format
+    all_dict_messages = base_messages_to_dict_messages(agent_chat.messages)
+    
+    # Extract generated messages (everything after the original messages)
+    generated_dict_messages = all_dict_messages[messages_before_count:]
+    
+    # Transform generated messages to filtered format (with tool calls shown)
+    generated_filtered_messages = Context.transform_messages_to_filtered(
+        generated_dict_messages, 
+        show_tool_calls=True
+    )
+    
+    # Convert filtered messages to dicts for JSON serialization
+    generated_messages_dicts = [msg.model_dump() for msg in generated_filtered_messages]
 
-    # Save the new message to context
-    context.messages = base_messages_to_dict_messages(agent_chat.messages)
+    # Save the new messages to context
+    context.messages = all_dict_messages
     Context.save_context(context)
+
+    # Initialize the response
+    response = Chat.ChatResponse(
+        response=agent_response,
+        saved_messages=True,
+        generated_messages=generated_messages_dicts
+    )
 
     # check if there are chat events
     if (context_dict.get("events")):

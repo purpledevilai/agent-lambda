@@ -169,29 +169,7 @@ def delete_all_contexts_for_user(user_id: str) -> None:
         delete_context(context.context_id)
 
 def transform_to_filtered_context(context: Context, show_tool_calls: bool = False) -> FilteredContext:
-    messages = []
-    for message in context.messages:
-        if (message["type"] == "human" or (message["type"] == "ai" and message["content"]) or message["type"] == "system"):
-                messages.append(FilteredMessage(**{
-                    "sender": message["type"],
-                    "message": message["content"]
-                }))
-                continue
-        if (show_tool_calls):
-            if (message["type"] == "ai" and len(message["tool_calls"]) > 0):
-                for tool_call in message["tool_calls"]:
-                    messages.append(ToolCallMessage(**{
-                        "type": "tool_call",
-                        "tool_call_id": tool_call["id"],
-                        "tool_name": tool_call["name"],
-                        "tool_input": tool_call["args"]
-                    }))
-            if (message["type"] == "tool"):
-                messages.append(ToolResponseMessage(**{
-                    "type": "tool_response",
-                    "tool_call_id": message["tool_call_id"],
-                    "tool_output": message["content"]
-                }))
+    messages = transform_messages_to_filtered(context.messages, show_tool_calls)
                 
     filtered_context = FilteredContext(**{
         "context_id": context.context_id,
@@ -223,6 +201,123 @@ def add_system_message(context: Context, message: str) -> Context:
     context.messages.extend(base_messages_to_dict_messages([SystemMessage(content=message)]))
     save_context(context)
     return context
+
+def transform_messages_to_filtered(messages: list[dict], show_tool_calls: bool = False) -> list[MessageType]:
+    """
+    Transform a list of dict messages to filtered message types.
+    
+    Args:
+        messages: List of message dictionaries
+        show_tool_calls: Whether to include tool call and tool response messages
+        
+    Returns:
+        List of FilteredMessage, ToolCallMessage, or ToolResponseMessage objects
+    """
+    filtered_messages = []
+    for message in messages:
+        if (message["type"] == "human" or (message["type"] == "ai" and message["content"]) or message["type"] == "system"):
+            filtered_messages.append(FilteredMessage(**{
+                "sender": message["type"],
+                "message": message["content"]
+            }))
+            continue
+        if (show_tool_calls):
+            if (message["type"] == "ai" and len(message["tool_calls"]) > 0):
+                for tool_call in message["tool_calls"]:
+                    filtered_messages.append(ToolCallMessage(**{
+                        "type": "tool_call",
+                        "tool_call_id": tool_call["id"],
+                        "tool_name": tool_call["name"],
+                        "tool_input": tool_call["args"]
+                    }))
+            if (message["type"] == "tool"):
+                filtered_messages.append(ToolResponseMessage(**{
+                    "type": "tool_response",
+                    "tool_call_id": message["tool_call_id"],
+                    "tool_output": message["content"]
+                }))
+    return filtered_messages
+
+def filtered_messages_to_dict_messages(filtered_messages: list[MessageType]) -> list[dict]:
+    """
+    Transform filtered message types back to dict messages that can be saved.
+    
+    Args:
+        filtered_messages: List of FilteredMessage, ToolCallMessage, or ToolResponseMessage objects
+        
+    Returns:
+        List of message dictionaries compatible with Context.messages
+    """
+    dict_messages = []
+    
+    # Group tool calls that belong together
+    pending_tool_calls = []
+    
+    for msg in filtered_messages:
+        if isinstance(msg, FilteredMessage):
+            # Flush any pending tool calls first
+            if pending_tool_calls:
+                dict_messages.append({
+                    "type": "ai",
+                    "content": "",
+                    "tool_calls": pending_tool_calls,
+                    "response_metadata": {},
+                    "id": None,
+                    "usage_metadata": None
+                })
+                pending_tool_calls = []
+            
+            # Add the filtered message
+            dict_messages.append({
+                "type": msg.sender,
+                "content": msg.message,
+                "response_metadata": {} if msg.sender == "ai" else None,
+                "id": None,
+                "usage_metadata": None
+            })
+            if msg.sender == "ai":
+                dict_messages[-1]["tool_calls"] = []
+                
+        elif isinstance(msg, ToolCallMessage):
+            # Accumulate tool calls
+            pending_tool_calls.append({
+                "id": msg.tool_call_id,
+                "name": msg.tool_name,
+                "args": msg.tool_input if msg.tool_input else {}
+            })
+            
+        elif isinstance(msg, ToolResponseMessage):
+            # Flush any pending tool calls first
+            if pending_tool_calls:
+                dict_messages.append({
+                    "type": "ai",
+                    "content": "",
+                    "tool_calls": pending_tool_calls,
+                    "response_metadata": {},
+                    "id": None,
+                    "usage_metadata": None
+                })
+                pending_tool_calls = []
+            
+            # Add the tool response
+            dict_messages.append({
+                "type": "tool",
+                "content": msg.tool_output,
+                "tool_call_id": msg.tool_call_id
+            })
+    
+    # Flush any remaining tool calls
+    if pending_tool_calls:
+        dict_messages.append({
+            "type": "ai",
+            "content": "",
+            "tool_calls": pending_tool_calls,
+            "response_metadata": {},
+            "id": None,
+            "usage_metadata": None
+        })
+    
+    return dict_messages
 
 
     
