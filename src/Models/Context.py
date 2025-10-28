@@ -6,7 +6,7 @@ from AWS.CloudWatchLogs import get_logger
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union
 from Models import Agent, Tool
-from langchain_core.messages import AIMessage, ToolMessage, SystemMessage
+from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, HumanMessage
 from LLM.BaseMessagesConverter import base_messages_to_dict_messages
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
@@ -192,6 +192,11 @@ def transform_to_history_context(context: Context, agent: Agent.Agent) -> Histor
         "agent": Agent.transform_to_history_agent(agent)
     })
 
+def add_human_message(context: Context, message: str) -> Context:
+    context.messages.extend(base_messages_to_dict_messages([HumanMessage(content=message)]))
+    save_context(context)
+    return context
+
 def add_ai_message(context: Context, message: str) -> Context:
     context.messages.extend(base_messages_to_dict_messages([AIMessage(content=message)]))
     save_context(context)
@@ -237,6 +242,41 @@ def transform_messages_to_filtered(messages: list[dict], show_tool_calls: bool =
                     "tool_output": message["content"]
                 }))
     return filtered_messages
+
+def validate_messages(filtered_messages: list[MessageType]) -> None:
+    """
+    Validate that tool call and tool response messages are properly paired and ordered.
+    
+    Args:
+        filtered_messages: List of FilteredMessage, ToolCallMessage, or ToolResponseMessage objects
+        
+    Raises:
+        ValueError: If validation fails
+    """
+    # Track tool call IDs in the order they appear
+    tool_call_ids = set()
+    tool_response_ids = set()
+    seen_tool_call_ids = set()
+    
+    for msg in filtered_messages:
+        if isinstance(msg, ToolCallMessage):
+            tool_call_ids.add(msg.tool_call_id)
+            seen_tool_call_ids.add(msg.tool_call_id)
+        elif isinstance(msg, ToolResponseMessage):
+            # Check that the tool call was seen before this response
+            if msg.tool_call_id not in seen_tool_call_ids:
+                raise ValueError(f"Tool response with ID '{msg.tool_call_id}' appears before its corresponding tool call")
+            tool_response_ids.add(msg.tool_call_id)
+    
+    # Check that every tool call has a corresponding tool response
+    missing_responses = tool_call_ids - tool_response_ids
+    if missing_responses:
+        raise ValueError(f"Tool calls found without corresponding responses: {missing_responses}")
+    
+    # Check that every tool response has a corresponding tool call
+    orphaned_responses = tool_response_ids - tool_call_ids
+    if orphaned_responses:
+        raise ValueError(f"Tool responses found without corresponding tool calls: {orphaned_responses}")
 
 def filtered_messages_to_dict_messages(filtered_messages: list[MessageType]) -> list[dict]:
     """

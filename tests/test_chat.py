@@ -250,14 +250,14 @@ class TestChat(unittest.TestCase):
         # Record the initial message count
         initial_message_count = len(context.messages)
 
-        # Create the request with save_messages=False
+        # Create the request with save_ai_messages=False
         request = create_request(
             method="POST",
             path="/chat",
             body={
                 "context_id": context.context_id,
                 "message": "Test message",
-                "save_messages": False
+                "save_ai_messages": False
             },
             headers={
                 "Authorization": access_token
@@ -274,11 +274,11 @@ class TestChat(unittest.TestCase):
 
         # Verify the response has the required fields
         self.assertIn("response", response)
-        self.assertIn("saved_messages", response)
+        self.assertIn("saved_ai_messages", response)
         self.assertIn("generated_messages", response)
         
-        # Verify saved_messages is False
-        self.assertEqual(response["saved_messages"], False)
+        # Verify saved_ai_messages is False
+        self.assertEqual(response["saved_ai_messages"], False)
         
         # Verify we have a response message
         self.assertIsNotNone(response["response"])
@@ -315,10 +315,11 @@ class TestChat(unittest.TestCase):
         self.assertTrue(has_tool_response, "Should have at least one tool response")
         self.assertTrue(has_final_message, "Should have final AI message")
 
-        # Fetch the context and verify messages were NOT saved
+        # Fetch the context and verify only the human message was saved (not AI-generated messages)
         updated_context = Context.get_context(context.context_id)
-        self.assertEqual(len(updated_context.messages), initial_message_count,
-                        "Message count should not have changed since save_messages=False")
+        # Should have initial messages + 1 human message, but NOT the AI-generated messages
+        self.assertEqual(len(updated_context.messages), initial_message_count + 1,
+                        "Only human message should be saved when save_ai_messages=False")
 
         # Clean up
         Context.delete_context(context.context_id)

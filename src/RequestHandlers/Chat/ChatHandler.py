@@ -24,13 +24,16 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         context = Context.get_public_context(body.context_id)
         agent = Agent.get_public_agent(context.agent_id)
 
-    # Context dict for context updates
+    # Add the human message to the context and save it immediately
+    context = Context.add_human_message(context, body.message)
+
+    # Context dict for context updates (after human message is added)
     context_dict = context.model_dump()
 
-    # Capture the number of messages before generation
-    messages_before_count = len(context.messages)
+    # Capture the number of messages before AI generation
+    messages_before_generation = len(context.messages)
 
-    # Create the agent chat
+    # Create the agent chat with the updated context (including human message)
     agent_chat = AgentChat(
         create_llm(),
         agent.prompt,
@@ -39,15 +42,14 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         context=context_dict
     )
 
-    # Add the human message and invoke the agent
-    agent_response = agent_chat.add_human_message_and_invoke(body.message)
+    # Invoke the agent (human message already in context)
+    agent_response = agent_chat.invoke()
 
     # Convert all messages to dict format
     all_dict_messages = base_messages_to_dict_messages(agent_chat.messages)
     
-    # Extract generated messages (everything after the original messages)
-    # Note: We skip the human message that was just added, so we add 1 to messages_before_count
-    generated_dict_messages = all_dict_messages[messages_before_count + 1:]
+    # Extract generated messages (everything after the human message)
+    generated_dict_messages = all_dict_messages[messages_before_generation:]
     
     # Transform generated messages to filtered format (with tool calls shown)
     generated_filtered_messages = Context.transform_messages_to_filtered(
@@ -58,15 +60,15 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
     # Convert filtered messages to dicts for JSON serialization
     generated_messages_dicts = [msg.model_dump() for msg in generated_filtered_messages]
 
-    # Conditionally save messages based on save_messages flag
-    if body.save_messages:
+    # Conditionally save AI-generated messages based on save_ai_messages flag
+    if body.save_ai_messages:
         context.messages = all_dict_messages
         Context.save_context(context)
 
     # Initialize the response
     response = Chat.ChatResponse(
         response=agent_response,
-        saved_messages=body.save_messages,
+        saved_ai_messages=body.save_ai_messages,
         generated_messages=generated_messages_dicts
     )
 

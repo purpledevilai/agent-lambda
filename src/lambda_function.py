@@ -21,6 +21,8 @@ from RequestHandlers.Context.CreateContextHandler import create_context_handler
 from RequestHandlers.Context.GetContextHandler import get_context_handler
 from RequestHandlers.Context.DeleteContextHandler import delete_context_handler
 from RequestHandlers.Context.GetContextHistoryHandler import get_context_history_handler
+from RequestHandlers.Context.AddMessagesHandler import add_messages_handler
+from RequestHandlers.Context.SetMessagesHandler import set_messages_handler
 
 # Agents
 from RequestHandlers.Agent.GetAgentsHandler import get_agents_handler
@@ -32,6 +34,7 @@ from RequestHandlers.Agent.DeleteAgentHandler import delete_agent_handler
 # Chat
 from RequestHandlers.Chat.ChatHandler import chat_handler
 from RequestHandlers.Chat.AddAIMessageHandler import add_ai_message_handler
+from RequestHandlers.Chat.InvokeHandler import invoke_handler
 
 # Chatpage
 from RequestHandlers.ChatPage.CreateChatPageHandler import create_chat_page_handler
@@ -151,6 +154,18 @@ handler_registry = {
             "public": False
         }
     },
+    "/context/add-messages": {
+        "POST": {
+            "handler": add_messages_handler,
+            "public": True
+        }
+    },
+    "/context/set-messages": {
+        "POST": {
+            "handler": set_messages_handler,
+            "public": True
+        }
+    },
     "/agents": {
         "GET": {
             "handler": get_agents_handler,
@@ -186,6 +201,12 @@ handler_registry = {
     "/chat/add-ai-message": {
         "POST": {
             "handler": add_ai_message_handler,
+            "public": True
+        }
+    },
+    "/chat/invoke": {
+        "POST": {
+            "handler": invoke_handler,
             "public": True
         }
     },

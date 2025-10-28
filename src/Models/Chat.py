@@ -4,7 +4,7 @@ from typing import Optional, List, Union
 class ChatInput(BaseModel):
     context_id: str
     message: str
-    save_messages: Optional[bool] = True
+    save_ai_messages: Optional[bool] = True
 
 # Import message types from Context for use in ChatResponse
 # We'll define them inline to avoid circular imports
@@ -27,6 +27,6 @@ MessageType = Union[FilteredMessage, ToolCallMessage, ToolResponseMessage]
 
 class ChatResponse(BaseModel):
     response: str
-    saved_messages: bool
+    saved_ai_messages: bool
     generated_messages: List[MessageType]
     events: Optional[list[dict]] = None
