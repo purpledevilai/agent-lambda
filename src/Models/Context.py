@@ -307,16 +307,26 @@ def filtered_messages_to_dict_messages(filtered_messages: list[MessageType]) -> 
                 })
                 pending_tool_calls = []
             
-            # Add the filtered message
-            dict_messages.append({
-                "type": msg.sender,
-                "content": msg.message,
-                "response_metadata": {} if msg.sender == "ai" else None,
-                "id": None,
-                "usage_metadata": None
-            })
+            # Add the filtered message with appropriate fields based on type
             if msg.sender == "ai":
-                dict_messages[-1]["tool_calls"] = []
+                dict_messages.append({
+                    "type": "ai",
+                    "content": msg.message,
+                    "tool_calls": [],
+                    "response_metadata": {},
+                    "id": None,
+                    "usage_metadata": None
+                })
+            elif msg.sender == "human":
+                dict_messages.append({
+                    "type": "human",
+                    "content": msg.message
+                })
+            elif msg.sender == "system":
+                dict_messages.append({
+                    "type": "system",
+                    "content": msg.message
+                })
                 
         elif isinstance(msg, ToolCallMessage):
             # Accumulate tool calls
