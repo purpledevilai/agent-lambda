@@ -551,3 +551,260 @@ const sayHello(name: string) {
         Context.delete_context(res_body["context_id"])
         Agent.delete_agent(agent.agent_id)
 
+    def test_add_messages(self):
+        """Test adding messages to a context"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-add-messages",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are a helpful assistant.",
+            tools=[]
+        )
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Record initial message count
+        initial_message_count = len(context.messages)
+
+        # Create messages to add
+        messages_to_add = [
+            {
+                "sender": "human",
+                "message": "Hello, how are you?"
+            },
+            {
+                "sender": "ai",
+                "message": "I'm doing well, thank you for asking!"
+            }
+        ]
+
+        # Create the request
+        request = create_request(
+            method="POST",
+            path="/context/add-messages",
+            body={
+                "context_id": context.context_id,
+                "messages": messages_to_add
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        
+        # Verify response structure
+        self.assertIn("context_id", response)
+        self.assertIn("messages", response)
+        self.assertEqual(response["context_id"], context.context_id)
+        
+        # Verify messages were added
+        self.assertEqual(len(response["messages"]), initial_message_count + 2)
+        
+        # Verify the new messages are in the response
+        last_two_messages = response["messages"][-2:]
+        self.assertEqual(last_two_messages[0]["sender"], "human")
+        self.assertEqual(last_two_messages[0]["message"], "Hello, how are you?")
+        self.assertEqual(last_two_messages[1]["sender"], "ai")
+        self.assertEqual(last_two_messages[1]["message"], "I'm doing well, thank you for asking!")
+
+        # Verify messages were saved to the database
+        updated_context = Context.get_context(context.context_id)
+        self.assertEqual(len(updated_context.messages), initial_message_count + 2)
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+
+    def test_set_messages(self):
+        """Test replacing all messages in a context"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-set-messages",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are a helpful assistant.",
+            tools=[]
+        )
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Add some initial messages
+        Context.add_ai_message(context, "Initial message 1")
+        Context.add_ai_message(context, "Initial message 2")
+        
+        # Refresh context to get updated messages
+        context = Context.get_context(context.context_id)
+        initial_message_count = len(context.messages)
+        self.assertGreater(initial_message_count, 0)
+
+        # Create new messages to replace all existing ones
+        new_messages = [
+            {
+                "sender": "human",
+                "message": "New conversation start"
+            },
+            {
+                "sender": "ai",
+                "message": "Hello! This is a fresh start."
+            }
+        ]
+
+        # Create the request
+        request = create_request(
+            method="POST",
+            path="/context/set-messages",
+            body={
+                "context_id": context.context_id,
+                "messages": new_messages
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        
+        # Verify response structure
+        self.assertIn("context_id", response)
+        self.assertIn("messages", response)
+        self.assertEqual(response["context_id"], context.context_id)
+        
+        # Verify all messages were replaced (should only have 2 new messages)
+        self.assertEqual(len(response["messages"]), 2)
+        self.assertEqual(response["messages"][0]["sender"], "human")
+        self.assertEqual(response["messages"][0]["message"], "New conversation start")
+        self.assertEqual(response["messages"][1]["sender"], "ai")
+        self.assertEqual(response["messages"][1]["message"], "Hello! This is a fresh start.")
+
+        # Verify messages were saved to the database
+        updated_context = Context.get_context(context.context_id)
+        self.assertEqual(len(updated_context.messages), 2)
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+
+    def test_generate_without_saving_then_add_messages(self):
+        """Test the workflow of generating messages without saving, then adding them via add-messages endpoint"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-generate-then-add",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="Call the pass_event tool with type 'approval_test' and data 'pending_approval'",
+            tools=["pass_event"]
+        )
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Record initial message count
+        initial_message_count = len(context.messages)
+
+        # Step 1: Generate messages without saving
+        chat_request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Please proceed",
+                "save_ai_messages": False
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the chat handler
+        chat_result = lambda_handler(chat_request, None)
+        self.assertEqual(chat_result["statusCode"], 200)
+        chat_response = json.loads(chat_result["body"])
+        
+        # Verify AI messages were NOT saved
+        self.assertEqual(chat_response["saved_ai_messages"], False)
+        self.assertIn("generated_messages", chat_response)
+        self.assertGreater(len(chat_response["generated_messages"]), 0)
+        
+        # Verify context has the human message but not the AI-generated messages
+        context_after_chat = Context.get_context(context.context_id)
+        self.assertEqual(len(context_after_chat.messages), initial_message_count + 1,
+                        "Human message should be saved even when save_ai_messages=False")
+
+        # Step 2: "Approve" and add the generated messages
+        # The human message is already saved, so we only need to add the AI-generated messages
+        messages_to_add = chat_response["generated_messages"]
+
+        add_messages_request = create_request(
+            method="POST",
+            path="/context/add-messages",
+            body={
+                "context_id": context.context_id,
+                "messages": messages_to_add
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the add messages handler
+        add_result = lambda_handler(add_messages_request, None)
+        self.assertEqual(add_result["statusCode"], 200)
+        add_response = json.loads(add_result["body"])
+
+        # Verify messages were added
+        self.assertGreater(len(add_response["messages"]), initial_message_count)
+        
+        # Verify the messages are now saved in the database
+        final_context = Context.get_context(context.context_id)
+        # Expected: initial + human message (already saved) + generated messages (just added)
+        expected_message_count = initial_message_count + 1 + len(messages_to_add)
+        self.assertEqual(len(final_context.messages), expected_message_count)
+
+        # Verify the complete conversation is in the context
+        filtered_context = Context.transform_to_filtered_context(final_context, show_tool_calls=True)
+        human_messages = [msg for msg in filtered_context.messages if hasattr(msg, 'sender') and msg.sender == 'human']
+        self.assertGreater(len(human_messages), 0)
+        self.assertEqual(human_messages[-1].message, "Please proceed")
+        
+        # Verify we have tool calls and responses
+        tool_calls = [msg for msg in filtered_context.messages if hasattr(msg, 'type') and msg.type == 'tool_call']
+        tool_responses = [msg for msg in filtered_context.messages if hasattr(msg, 'type') and msg.type == 'tool_response']
+        self.assertGreater(len(tool_calls), 0, "Should have tool calls in the final context")
+        self.assertGreater(len(tool_responses), 0, "Should have tool responses in the final context")
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+

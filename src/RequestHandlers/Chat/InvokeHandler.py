@@ -9,44 +9,29 @@ from LLM.CreateLLM import create_llm
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
 
 
-class AddAIMessageInput(BaseModel):
+class InvokeInput(BaseModel):
     context_id: str
-    message: Optional[str] = None
-    prompt: Optional[str] = None
+    save_ai_messages: Optional[bool] = True
 
 
-def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agent.Agent:  
-
+def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Chat.ChatResponse:
+    """
+    Invoke the agent without adding a human message.
+    Useful after manually setting up tool calls or for continuing from existing messages.
+    """
     # Get the body of the request
-    body = AddAIMessageInput(**json.loads(lambda_event.body))
+    body = InvokeInput(**json.loads(lambda_event.body))
     
     # Get the context and agent
     context = None
     agent = None
-    if (user):
+    if user:
         db_user = User.get_user(user.sub)
         context = Context.get_context_for_user(body.context_id, db_user.user_id)
         agent = Agent.get_agent_for_user(context.agent_id, db_user)
     else:
         context = Context.get_public_context(body.context_id)
         agent = Agent.get_public_agent(context.agent_id)
-
-    # If message just add it to the context and return
-    if body.message:
-        # Add it as an AI message to the context
-        Context.add_ai_message(context=context, message=body.message)
-        # Return the message - no generated messages since we're just adding a pre-written message
-        return Chat.ChatResponse(
-            response=body.message,
-            saved_ai_messages=True,
-            generated_messages=[]
-        )
-    
-    # Otherwise, if prompt is provided, append it to the agent's prompt
-    if not body.prompt:
-        raise ValueError("Either 'message' or 'prompt' must be provided in the request body.")
-    
-    context = Context.add_system_message(context=context, message=body.prompt)
 
     # Context dict for context updates
     context_dict = context.model_dump()
@@ -56,14 +41,14 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
 
     # Create the agent chat
     agent_chat = AgentChat(
-        llm=create_llm(),
-        prompt=agent.prompt,
+        create_llm(),
+        agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=[Tool.get_agent_tool_with_id(tool) for tool in agent.tools] if agent.tools else [],
         context=context_dict
     )
 
-    # Invoke the agent (no human message added)
+    # Invoke the agent without adding a human message
     agent_response = agent_chat.invoke()
 
     # Convert all messages to dict format
@@ -81,19 +66,21 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
     # Convert filtered messages to dicts for JSON serialization
     generated_messages_dicts = [msg.model_dump() for msg in generated_filtered_messages]
 
-    # Save the new messages to context
-    context.messages = all_dict_messages
-    Context.save_context(context)
+    # Conditionally save AI-generated messages based on save_ai_messages flag
+    if body.save_ai_messages:
+        context.messages = all_dict_messages
+        Context.save_context(context)
 
     # Initialize the response
     response = Chat.ChatResponse(
         response=agent_response,
-        saved_ai_messages=True,
+        saved_ai_messages=body.save_ai_messages,
         generated_messages=generated_messages_dicts
     )
 
     # check if there are chat events
-    if (context_dict.get("events")):
+    if context_dict.get("events"):
         response.events = context_dict["events"]
     
     return response
+
