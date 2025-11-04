@@ -225,6 +225,285 @@ class TestChat(unittest.TestCase):
         Context.delete_context(context.context_id)
         Agent.delete_agent(agent.agent_id)
 
+    def test_add_ai_message_save_both(self):
+        """Test save_system_message=True, save_ai_messages=True (saves both)"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-save-both",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are a helpful assistant.",
+            tools=[]
+        )
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Add a human message first
+        Context.add_human_message(context, "Hello")
+        initial_message_count = len(context.messages)
+
+        # Add AI message with prompt, saving both system message and AI response
+        request = create_request(
+            method="POST",
+            path="/chat/add-ai-message",
+            body={
+                "context_id": context.context_id,
+                "prompt": "Respond in a friendly tone",
+                "save_system_message": True,
+                "save_ai_messages": True
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        
+        self.assertIn("response", response)
+        self.assertEqual(response["saved_ai_messages"], True)
+        self.assertGreater(len(response["generated_messages"]), 0)
+
+        # Verify both system message and AI messages were saved
+        updated_context = Context.get_context(context.context_id)
+        self.assertGreater(len(updated_context.messages), initial_message_count)
+        
+        # Check that we have a system message with our prompt
+        system_messages = [msg for msg in updated_context.messages if msg.get("type") == "system"]
+        self.assertGreater(len(system_messages), 0)
+        self.assertIn("friendly tone", system_messages[-1].get("content", ""))
+        
+        # Check that we have an AI message
+        ai_messages = [msg for msg in updated_context.messages if msg.get("type") == "ai" and msg.get("content")]
+        self.assertGreater(len(ai_messages), 0)
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+
+    def test_add_ai_message_save_system_only(self):
+        """Test save_system_message=True, save_ai_messages=False (saves only system message)"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-save-system",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are a helpful assistant.",
+            tools=[]
+        )
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Add a human message first
+        Context.add_human_message(context, "Hello")
+        initial_message_count = len(context.messages)
+
+        # Add AI message with prompt, saving only system message
+        request = create_request(
+            method="POST",
+            path="/chat/add-ai-message",
+            body={
+                "context_id": context.context_id,
+                "prompt": "Consider the user is a beginner",
+                "save_system_message": True,
+                "save_ai_messages": False
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        
+        self.assertIn("response", response)
+        self.assertEqual(response["saved_ai_messages"], False)
+        self.assertGreater(len(response["generated_messages"]), 0)
+
+        # Verify only system message was saved (not AI messages)
+        updated_context = Context.get_context(context.context_id)
+        
+        # Should have exactly one more message (the system message)
+        self.assertEqual(len(updated_context.messages), initial_message_count + 1)
+        
+        # Check that the last message is the system message with our prompt
+        last_message = updated_context.messages[-1]
+        self.assertEqual(last_message.get("type"), "system")
+        self.assertIn("beginner", last_message.get("content", ""))
+        
+        # Verify no new AI messages were added after the initial messages
+        ai_messages_after = [msg for msg in updated_context.messages[initial_message_count:] if msg.get("type") == "ai"]
+        self.assertEqual(len(ai_messages_after), 0)
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+
+    def test_add_ai_message_temporary_steering(self):
+        """Test save_system_message=False, save_ai_messages=True (temporary steering - most powerful use case)"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-temp-steering",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are a helpful assistant.",
+            tools=[]
+        )
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Add a human message first
+        Context.add_human_message(context, "Tell me about Python")
+        initial_message_count = len(context.messages)
+        
+        # Count initial system messages
+        initial_system_messages = [msg for msg in context.messages if msg.get("type") == "system"]
+        initial_system_count = len(initial_system_messages)
+
+        # Add AI message with prompt for temporary steering
+        request = create_request(
+            method="POST",
+            path="/chat/add-ai-message",
+            body={
+                "context_id": context.context_id,
+                "prompt": "Keep your response under 20 words and be very formal",
+                "save_system_message": False,  # Don't save the prompt
+                "save_ai_messages": True  # Save the AI response
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        
+        self.assertIn("response", response)
+        self.assertEqual(response["saved_ai_messages"], True)
+        self.assertGreater(len(response["generated_messages"]), 0)
+
+        # Verify AI messages were saved but system message was NOT saved
+        updated_context = Context.get_context(context.context_id)
+        self.assertGreater(len(updated_context.messages), initial_message_count)
+        
+        # Verify the system message was NOT added (count should be the same)
+        final_system_messages = [msg for msg in updated_context.messages if msg.get("type") == "system"]
+        self.assertEqual(len(final_system_messages), initial_system_count)
+        
+        # Verify the temporary prompt is NOT in any system message
+        for msg in updated_context.messages:
+            if msg.get("type") == "system":
+                self.assertNotIn("20 words", msg.get("content", ""))
+                self.assertNotIn("very formal", msg.get("content", ""))
+        
+        # Verify AI response WAS saved
+        ai_messages_after = [msg for msg in updated_context.messages[initial_message_count:] if msg.get("type") == "ai" and msg.get("content")]
+        self.assertGreater(len(ai_messages_after), 0)
+        
+        print(f"Temporary steering test - AI response: {response['response']}")
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+
+    def test_add_ai_message_save_nothing(self):
+        """Test save_system_message=False, save_ai_messages=False (full preview mode)"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-save-nothing",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are a helpful assistant.",
+            tools=[]
+        )
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Add a human message first
+        Context.add_human_message(context, "What's the weather like?")
+        # Refresh context from DB to get accurate count
+        context = Context.get_context(context.context_id)
+        initial_message_count = len(context.messages)
+
+        # Add AI message with prompt, saving nothing (full preview)
+        request = create_request(
+            method="POST",
+            path="/chat/add-ai-message",
+            body={
+                "context_id": context.context_id,
+                "prompt": "Respond with technical meteorological details",
+                "save_system_message": False,
+                "save_ai_messages": False
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        
+        self.assertIn("response", response)
+        self.assertEqual(response["saved_ai_messages"], False)
+        self.assertGreater(len(response["generated_messages"]), 0)
+
+        # Verify NOTHING was saved to the context
+        updated_context = Context.get_context(context.context_id)
+        self.assertEqual(len(updated_context.messages), initial_message_count)
+        
+        # Verify no system message was added
+        no_new_system = True
+        for msg in updated_context.messages[initial_message_count:]:
+            if msg.get("type") == "system" and "meteorological" in msg.get("content", ""):
+                no_new_system = False
+        self.assertTrue(no_new_system)
+        
+        # Verify no AI message was added after initial messages
+        no_new_ai = True
+        for msg in updated_context.messages[initial_message_count:]:
+            if msg.get("type") == "ai":
+                no_new_ai = False
+        self.assertTrue(no_new_ai)
+        
+        print(f"Full preview mode - generated response: {response['response']}")
+        print(f"Context unchanged - message count: {len(updated_context.messages)}")
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+
     def test_chat_without_saving_messages(self):
         """Test that save_messages=False generates messages but doesn't save them to context"""
         
