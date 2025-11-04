@@ -5,6 +5,7 @@ This document describes the new endpoints that give you fine-grained control ove
 ## Table of Contents
 - [Overview](#overview)
 - [POST /chat (Enhanced)](#post-chat-enhanced)
+- [POST /chat/add-ai-message (Enhanced)](#post-chatadd-ai-message-enhanced)
 - [POST /chat/invoke](#post-chatinvoke)
 - [POST /context/add-messages](#post-contextadd-messages)
 - [POST /context/set-messages](#post-contextset-messages)
@@ -114,6 +115,155 @@ curl -X POST https://api.example.com/chat \
 ```
 
 **Use Case**: Preview the AI's response before committing it to the conversation history. You can then approve, modify, or regenerate.
+
+---
+
+## POST /chat/add-ai-message (Enhanced)
+
+Add an AI message to the context, either as a pre-written message or by providing a prompt that causes the agent to generate a response.
+
+### Request
+
+```json
+{
+  "context_id": "uuid",
+  "message": "Pre-written AI message",  // Optional, mutually exclusive with prompt
+  "prompt": "Additional instructions",  // Optional, mutually exclusive with message
+  "save_ai_messages": true,  // Optional, defaults to true (only applies when using prompt)
+  "save_system_message": true  // Optional, defaults to true (only applies when using prompt)
+}
+```
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `context_id` | string | Yes | - | The context/conversation ID |
+| `message` | string | No | - | A pre-written AI message to add directly (always saved) |
+| `prompt` | string | No | - | A system prompt to add before invoking the agent |
+| `save_ai_messages` | boolean | No | `true` | Whether to save AI-generated messages (only applies when using `prompt`) |
+| `save_system_message` | boolean | No | `true` | Whether to save the system prompt message (only applies when using `prompt`) |
+
+**Note**: You must provide either `message` OR `prompt`, but not both.
+
+### Response
+
+Same format as `/chat` endpoint:
+
+```json
+{
+  "response": "The AI response or the message you provided",
+  "saved_ai_messages": true,
+  "generated_messages": [...],  // Empty if using 'message', populated if using 'prompt'
+  "events": []
+}
+```
+
+### Behavior
+
+#### When using `message` parameter:
+1. The pre-written message is added directly to the context as an AI message
+2. **Always saved** (the `save_ai_messages` and `save_system_message` flags don't apply)
+3. Returns empty `generated_messages` array
+4. `saved_ai_messages` is always `true`
+
+#### When using `prompt` parameter:
+
+The behavior depends on the combination of `save_system_message` and `save_ai_messages` flags:
+
+**Case 1: `save_system_message=true, save_ai_messages=true` (default)**
+- System message with prompt is added and saved
+- Agent is invoked to generate a response
+- AI-generated messages are saved
+- Result: Both system message and AI response are in the context
+
+**Case 2: `save_system_message=true, save_ai_messages=false`**
+- System message with prompt is added and saved
+- Agent is invoked to generate a response
+- AI-generated messages are NOT saved
+- Result: Only the system message remains in the context
+- Use case: Save the prompt for context but preview the AI response
+
+**Case 3: `save_system_message=false, save_ai_messages=true`**
+- System message with prompt is added temporarily (for generation only)
+- Agent is invoked to generate a response
+- System message is removed before saving
+- AI-generated messages are saved
+- Result: Only the AI response is in the context (prompt was temporary)
+- Use case: **Temporary steering** - guide the agent without permanently affecting context
+
+**Case 4: `save_system_message=false, save_ai_messages=false`**
+- System message with prompt is added temporarily
+- Agent is invoked to generate a response
+- Neither system message nor AI messages are saved
+- Result: Context remains unchanged
+- Use case: **Full preview mode** - test prompts without any permanent changes
+
+### Example 1: Add Pre-written Message
+
+```bash
+# Add a pre-written AI message directly
+curl -X POST https://api.example.com/chat/add-ai-message \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context_id": "ctx_123",
+    "message": "I have processed your request successfully."
+  }'
+```
+
+**Use Case**: Manually insert AI messages for conversation construction or branching.
+
+### Example 2: Temporary Steering (Most Powerful Use Case)
+
+```bash
+# Temporarily guide the agent without saving the prompt
+curl -X POST https://api.example.com/chat/add-ai-message \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context_id": "ctx_123",
+    "prompt": "Respond in a formal tone and keep it brief",
+    "save_system_message": false,
+    "save_ai_messages": true
+  }'
+```
+
+**Use Case**: **Temporary steering** - The prompt guides the agent's response, but only the AI's response is saved. The prompt doesn't permanently affect the context. Perfect for one-time adjustments or style changes.
+
+### Example 3: Full Preview Mode
+
+```bash
+# Test a prompt without saving anything
+curl -X POST https://api.example.com/chat/add-ai-message \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context_id": "ctx_123",
+    "prompt": "Respond with technical details",
+    "save_system_message": false,
+    "save_ai_messages": false
+  }'
+```
+
+**Use Case**: Experiment with different prompts to see how the agent responds without making any changes to the context.
+
+### Example 4: Save Prompt, Preview Response
+
+```bash
+# Save the prompt but not the AI response
+curl -X POST https://api.example.com/chat/add-ai-message \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "context_id": "ctx_123",
+    "prompt": "Consider the user is a beginner",
+    "save_system_message": true,
+    "save_ai_messages": false
+  }'
+```
+
+**Use Case**: Add context for future messages but preview the immediate response before committing it.
 
 ---
 
