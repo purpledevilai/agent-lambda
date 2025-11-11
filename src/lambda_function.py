@@ -78,6 +78,13 @@ from RequestHandlers.StructuredResponseEndpoint.DeleteSREHandler import delete_s
 from RequestHandlers.StructuredResponseEndpoint.GetSREsHandler import get_sres_handler
 from RequestHandlers.StructuredResponseEndpoint.RunSREHandler import run_sre_handler
 
+# DataWindow
+from RequestHandlers.DataWindow.CreateDataWindowHandler import create_data_window_handler
+from RequestHandlers.DataWindow.GetDataWindowHandler import get_data_window_handler
+from RequestHandlers.DataWindow.GetDataWindowsHandler import get_data_windows_handler
+from RequestHandlers.DataWindow.UpdateDataWindowHandler import update_data_window_handler
+from RequestHandlers.DataWindow.DeleteDataWindowHandler import delete_data_window_handler
+
 # JSON Documents
 from RequestHandlers.JSONDocument.CreateJSONDocumentHandler import create_json_document_handler
 from RequestHandlers.JSONDocument.GetJSONDocumentHandler import get_json_document_handler
@@ -349,6 +356,32 @@ handler_registry = {
         "POST": {
             "handler": run_sre_handler,
             "public": True
+        }
+    },
+    "/data-window": {
+        "POST": {
+            "handler": create_data_window_handler,
+            "public": False
+        }
+    },
+    "/data-window/{data_window_id}": {
+        "GET": {
+            "handler": get_data_window_handler,
+            "public": False
+        },
+        "PUT": {
+            "handler": update_data_window_handler,
+            "public": False
+        },
+        "DELETE": {
+            "handler": delete_data_window_handler,
+            "public": False
+        }
+    },
+    "/data-windows": {
+        "GET": {
+            "handler": get_data_windows_handler,
+            "public": False
         }
     },
     "/integration": {
