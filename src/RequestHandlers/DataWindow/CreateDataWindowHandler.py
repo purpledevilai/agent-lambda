@@ -10,12 +10,15 @@ def create_data_window_handler(lambda_event: LambdaEvent, user: CognitoUser) -> 
     POST /data-window
     Body: CreateDataWindowParams
     """
+    db_user = User.get_user(user.sub)
+    
     body = DataWindow.CreateDataWindowParams(**json.loads(lambda_event.body))
     
-    # Get user and validate org membership
-    db_user = User.get_user(user.sub)
-    if body.org_id not in db_user.organizations:
-        raise Exception(f"User does not belong to organization {body.org_id}", 403)
+    # Default to user's first org if not specified
+    if body.org_id == None:
+        body.org_id = db_user.organizations[0]
+    elif body.org_id not in db_user.organizations:
+        raise Exception(f"User does not have access to this organization", 403)
     
     # Create the DataWindow
     data_window = DataWindow.create_data_window(
