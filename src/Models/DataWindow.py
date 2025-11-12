@@ -18,7 +18,7 @@ class DataWindow(BaseModel):
     updated_at: int
 
 class CreateDataWindowParams(BaseModel):
-    org_id: str
+    org_id: Optional[str] = None
     name: Optional[str] = None
     description: Optional[str] = None
     data: str
