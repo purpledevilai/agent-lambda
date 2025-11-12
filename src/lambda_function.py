@@ -369,7 +369,7 @@ handler_registry = {
             "handler": get_data_window_handler,
             "public": False
         },
-        "PUT": {
+        "POST": {
             "handler": update_data_window_handler,
             "public": False
         },
