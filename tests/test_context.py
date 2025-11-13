@@ -808,3 +808,282 @@ const sayHello(name: string) {
         Context.delete_context(context.context_id)
         Agent.delete_agent(agent.agent_id)
 
+    def test_create_context_with_initialize_tools_single_tool(self):
+        """Test creating a context with a single initialization tool that has parameters"""
+        
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create a tool with parameters
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="greet_user",
+            description="Greet a user by name",
+            code="def greet_user(name, greeting='Hello'):\n  return f'{greeting}, {name}!'"
+        )
+
+        # Create agent
+        agent = Agent.create_agent(
+            agent_name="test-init-tools-agent",
+            agent_description="agent with init tools",
+            prompt="You are a helpful assistant",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False
+        )
+
+        # Create context with initialization tools
+        body = {
+            "agent_id": agent.agent_id,
+            "initialize_tools": [
+                {
+                    "tool_id": tool.tool_id,
+                    "tool_input": {
+                        "name": "Alice",
+                        "greeting": "Hi"
+                    }
+                }
+            ]
+        }
+
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        
+        res_body = json.loads(result["body"])
+        
+        # Verify that initialization messages were created
+        context = Context.get_context(res_body["context_id"])
+        self.assertGreaterEqual(len(context.messages), 2)  # AI message with tool call + tool response
+        self.assertEqual(context.messages[0]["type"], "ai")
+        self.assertEqual(len(context.messages[0]["tool_calls"]), 1)
+        self.assertEqual(context.messages[0]["tool_calls"][0]["name"], "greet_user")
+        self.assertEqual(context.messages[0]["tool_calls"][0]["args"]["name"], "Alice")
+        self.assertEqual(context.messages[0]["tool_calls"][0]["args"]["greeting"], "Hi")
+        self.assertEqual(context.messages[1]["type"], "tool")
+        self.assertIn("Hi, Alice!", context.messages[1]["content"])
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(tool.tool_id)
+
+    def test_create_context_with_initialize_tools_multiple_tools(self):
+        """Test creating a context with multiple initialization tools"""
+        
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create multiple tools
+        tool1 = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="set_language",
+            description="Set the language preference",
+            code="def set_language(lang):\n  return f'Language set to {lang}'"
+        )
+
+        tool2 = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="set_theme",
+            description="Set the theme preference",
+            code="def set_theme(theme):\n  return f'Theme set to {theme}'"
+        )
+
+        # Create agent
+        agent = Agent.create_agent(
+            agent_name="test-multi-init-tools-agent",
+            agent_description="agent with multiple init tools",
+            prompt="You are a helpful assistant",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False
+        )
+
+        # Create context with multiple initialization tools
+        body = {
+            "agent_id": agent.agent_id,
+            "initialize_tools": [
+                {
+                    "tool_id": tool1.tool_id,
+                    "tool_input": {"lang": "Spanish"}
+                },
+                {
+                    "tool_id": tool2.tool_id,
+                    "tool_input": {"theme": "dark"}
+                }
+            ]
+        }
+
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        
+        res_body = json.loads(result["body"])
+        
+        # Verify that initialization messages were created
+        context = Context.get_context(res_body["context_id"])
+        # Should have: 1 AI message with 2 tool calls + 2 tool responses = 3 messages
+        self.assertEqual(len(context.messages), 3)
+        self.assertEqual(context.messages[0]["type"], "ai")
+        self.assertEqual(len(context.messages[0]["tool_calls"]), 2)
+        
+        # Verify tool calls
+        self.assertEqual(context.messages[0]["tool_calls"][0]["name"], "set_language")
+        self.assertEqual(context.messages[0]["tool_calls"][0]["args"]["lang"], "Spanish")
+        self.assertEqual(context.messages[0]["tool_calls"][1]["name"], "set_theme")
+        self.assertEqual(context.messages[0]["tool_calls"][1]["args"]["theme"], "dark")
+        
+        # Verify tool responses
+        self.assertEqual(context.messages[1]["type"], "tool")
+        self.assertIn("Language set to Spanish", context.messages[1]["content"])
+        self.assertEqual(context.messages[2]["type"], "tool")
+        self.assertIn("Theme set to dark", context.messages[2]["content"])
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(tool1.tool_id)
+        Tool.delete_tool(tool2.tool_id)
+
+    def test_create_context_with_initialize_tools_and_agent_initialize_tool(self):
+        """Test that agent.initialize_tool_id runs first, followed by initialize_tools"""
+        
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create agent's initialization tool (no params)
+        agent_init_tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="agent_init",
+            description="Agent's initialization tool",
+            code="def agent_init():\n  return 'Agent initialized'"
+        )
+
+        # Create user-provided initialization tool (with params)
+        user_init_tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="user_setup",
+            description="User setup tool",
+            code="def user_setup(config):\n  return f'User setup: {config}'"
+        )
+
+        # Create agent with initialize_tool_id
+        agent = Agent.create_agent(
+            agent_name="test-combined-init-agent",
+            agent_description="agent with both init strategies",
+            prompt="You are a helpful assistant",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            initialize_tool_id=agent_init_tool.tool_id
+        )
+
+        # Create context with additional initialization tools
+        body = {
+            "agent_id": agent.agent_id,
+            "initialize_tools": [
+                {
+                    "tool_id": user_init_tool.tool_id,
+                    "tool_input": {"config": "advanced"}
+                }
+            ]
+        }
+
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        
+        res_body = json.loads(result["body"])
+        
+        # Verify initialization messages
+        context = Context.get_context(res_body["context_id"])
+        # Should have: 1 AI message with 2 tool calls + 2 tool responses = 3 messages
+        self.assertEqual(len(context.messages), 3)
+        self.assertEqual(context.messages[0]["type"], "ai")
+        self.assertEqual(len(context.messages[0]["tool_calls"]), 2)
+        
+        # Verify agent's init tool ran first
+        self.assertEqual(context.messages[0]["tool_calls"][0]["name"], "agent_init")
+        self.assertEqual(context.messages[0]["tool_calls"][0]["args"], {})
+        self.assertEqual(context.messages[1]["type"], "tool")
+        self.assertIn("Agent initialized", context.messages[1]["content"])
+        
+        # Verify user's init tool ran second
+        self.assertEqual(context.messages[0]["tool_calls"][1]["name"], "user_setup")
+        self.assertEqual(context.messages[0]["tool_calls"][1]["args"]["config"], "advanced")
+        self.assertEqual(context.messages[2]["type"], "tool")
+        self.assertIn("User setup: advanced", context.messages[2]["content"])
+
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(agent_init_tool.tool_id)
+        Tool.delete_tool(user_init_tool.tool_id)
+
+    def test_create_context_with_initialize_tools_permission_error(self):
+        """Test that using a tool from another org fails with permission error"""
+        
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create agent
+        agent = Agent.create_agent(
+            agent_name="test-permission-agent",
+            agent_description="agent for permission test",
+            prompt="You are a helpful assistant",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False
+        )
+
+        # Try to use a tool from a different org (using a fake tool_id that doesn't exist in user's org)
+        body = {
+            "agent_id": agent.agent_id,
+            "initialize_tools": [
+                {
+                    "tool_id": "non-existent-tool-id-12345",
+                    "tool_input": {"test": "value"}
+                }
+            ]
+        }
+
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+
+        result = lambda_handler(request, None)
+        # Should fail with 403 or 500 (permission error)
+        self.assertIn(result["statusCode"], [403, 500])
+        
+        error_body = json.loads(result["body"])
+        self.assertIn("error", error_body)
+        # The error message should mention the organization or tool not found
+        self.assertTrue(
+            "organization" in error_body["error"].lower() or 
+            "not found" in error_body["error"].lower()
+        )
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+

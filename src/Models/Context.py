@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 from Models import Agent, Tool
 from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, HumanMessage
 from LLM.BaseMessagesConverter import base_messages_to_dict_messages
+from Tools.ToolRegistry import tool_registry
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -24,11 +25,16 @@ class Context(BaseModel):
     prompt_args: Optional[dict] = None
     user_defined: Optional[dict] = None
 
+class InitializeTool(BaseModel):
+    tool_id: str
+    tool_input: dict
+
 class CreateContextParams(BaseModel):
     agent_id: str
     invoke_agent_message: Optional[bool] = False
     prompt_args: Optional[dict] = None
     user_defined: Optional[dict] = None
+    initialize_tools: Optional[List[InitializeTool]] = None
 
 class FilteredMessage(BaseModel):
     sender: str
@@ -72,7 +78,8 @@ def create_context(
         agent_id: str,
         user_id: Optional[str] = None,
         prompt_args: Optional[dict] = None,
-        user_defined: Optional[dict] = None
+        user_defined: Optional[dict] = None,
+        initialize_tools: Optional[List[InitializeTool]] = None
     ) -> Context:
     contextData = {
         CONTEXTS_PRIMARY_KEY: str(uuid.uuid4()),
@@ -87,40 +94,83 @@ def create_context(
 
     context = Context(**contextData)
 
-    try:
-        agent = Agent.get_agent(agent_id)
-        if agent.initialize_tool_id:
-            tool = Tool.get_agent_tool_with_id(agent.initialize_tool_id)
-            if len(tool.params.model_fields) > 0:
-                raise Exception("Initialization tool cannot have parameters")
+    agent = Agent.get_agent(agent_id)
+    if not agent:
+        raise Exception(f"Agent with id: {agent_id} does not exist", 404)
+    
+    # Build list of tools to initialize
+    tools_to_initialize = []
+    
+    # Add agent's initialize_tool_id first (for backwards compatibility)
+    if agent.initialize_tool_id:
+        tool = Tool.get_agent_tool_with_id(agent.initialize_tool_id)
+        if len(tool.params.model_fields) > 0:
+            raise Exception("Initialization tool cannot have parameters")
+        tools_to_initialize.append({
+            "tool_id": agent.initialize_tool_id,
+            "tool_input": {}
+        })
+    
+    # Add user-provided initialize_tools
+    if initialize_tools:
+        # Get org's tools for permission validation
+        org_tools = Tool.get_tools_for_org(agent.org_id)
+        org_tool_ids = [tool.tool_id for tool in org_tools]
+        
+        # Get registered tool names
+        registered_tool_names = list(tool_registry.keys())
+        
+        for init_tool in initialize_tools:
+            # Validate permissions - tool must be either in org's tools OR in registered tools
+            if init_tool.tool_id not in org_tool_ids and init_tool.tool_id not in registered_tool_names:
+                raise Exception(f"Tool {init_tool.tool_id} does not belong to organization {agent.org_id}", 403)
             
-            initialization_messages = []
-
+            tools_to_initialize.append({
+                "tool_id": init_tool.tool_id,
+                "tool_input": init_tool.tool_input
+            })
+    
+    # Execute initialization tools
+    if tools_to_initialize:
+        initialization_messages = []
+        tool_calls_for_ai_message = []
+        
+        # Build all tool calls for a single AI message
+        for tool_data in tools_to_initialize:
+            tool = Tool.get_agent_tool_with_id(tool_data["tool_id"])
             tool_call_id = str(uuid.uuid4())
-            ai_message = AIMessage(
-                content="",
-                tool_calls=[{
-                    "id": tool_call_id,
-                    "name": tool.params.__name__,
-                    "args": {}
-                }]
-            )
-            initialization_messages.append(ai_message)
-
+            
+            tool_calls_for_ai_message.append({
+                "id": tool_call_id,
+                "name": tool.params.__name__,
+                "args": tool_data["tool_input"]
+            })
+        
+        # Create single AI message with all tool calls
+        ai_message = AIMessage(
+            content="",
+            tool_calls=tool_calls_for_ai_message
+        )
+        initialization_messages.append(ai_message)
+        
+        # Execute each tool and create tool messages
+        for i, tool_data in enumerate(tools_to_initialize):
+            tool = Tool.get_agent_tool_with_id(tool_data["tool_id"])
+            tool_call_id = tool_calls_for_ai_message[i]["id"]
+            
             try:
                 if tool.pass_context:
-                    result = tool.function(context=context.model_dump())
+                    result = tool.function(**tool_data["tool_input"], context=context.model_dump())
                 else:
-                    result = tool.function()
+                    result = tool.function(**tool_data["tool_input"])
                 tool_message = ToolMessage(tool_call_id=tool_call_id, content=result)
                 initialization_messages.append(tool_message)
-                context.messages = base_messages_to_dict_messages(initialization_messages)
             except Exception as e:
-                logger.error(f"Error running initialization tool {agent.initialize_tool_id}: {e}")
-                error_message = AIMessage(content=f"Initialization tool failed: {e}")
-                context.messages.append(error_message.model_dump())
-    except Exception as e:
-        logger.error(f"Initialization error: {e}")
+                logger.error(f"Error running initialization tool {tool_data['tool_id']}: {e}")
+                # Fail fast - raise the exception
+                raise Exception(f"Initialization tool {tool_data['tool_id']} failed: {e}")
+        
+        context.messages = base_messages_to_dict_messages(initialization_messages)
 
     put_item(CONTEXTS_TABLE_NAME, context.model_dump())
     return context
