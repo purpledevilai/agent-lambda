@@ -7,6 +7,7 @@ from AWS.Lambda import LambdaEvent
 from AWS.Cognito import get_user_from_cognito, CognitoUser
 from AWS.APIGateway import create_api_gateway_response, APIGatewayResponse
 from AWS.CloudWatchLogs import get_logger
+from Models import APIKey
 
 # User
 from RequestHandlers.User.CreateUserHandler import create_user_handler
@@ -84,6 +85,9 @@ from RequestHandlers.DataWindow.GetDataWindowHandler import get_data_window_hand
 from RequestHandlers.DataWindow.GetDataWindowsHandler import get_data_windows_handler
 from RequestHandlers.DataWindow.UpdateDataWindowHandler import update_data_window_handler
 from RequestHandlers.DataWindow.DeleteDataWindowHandler import delete_data_window_handler
+
+# APIKey
+from RequestHandlers.APIKey.GenerateAPIKeyHandler import generate_api_key_handler
 
 # JSON Documents
 from RequestHandlers.JSONDocument.CreateJSONDocumentHandler import create_json_document_handler
@@ -384,6 +388,12 @@ handler_registry = {
             "public": False
         }
     },
+    "/generate-api-key": {
+        "POST": {
+            "handler": generate_api_key_handler,
+            "public": False
+        }
+    },
     "/integration": {
         "POST": {
             "handler": create_integration_handler,
@@ -544,7 +554,20 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
             if "Authorization" not in lambda_event.headers:
                 raise Exception("No authentication token provided")
             token = lambda_event.headers["Authorization"]
-            user = get_user_from_cognito(token)
+            
+            # Try API key authentication first
+            if APIKey.validate_api_key(token):
+                contents = APIKey.get_api_key_contents(token)
+                # Mock CognitoUser with api_key_id as sub
+                user = CognitoUser(
+                    sub=contents["api_key_id"],
+                    email="",
+                    family_name="API",
+                    given_name="Key"
+                )
+            else:
+                # Fall back to Cognito authentication
+                user = get_user_from_cognito(token)
         except Exception as e:
             logger.error(str(e))
             # No user, but request is to a public endpoint
