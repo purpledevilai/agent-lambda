@@ -7,7 +7,7 @@ def update_data_window_handler(lambda_event: LambdaEvent, user: CognitoUser) -> 
     """
     Update a DataWindow.
     
-    PUT /data-window/{data_window_id}
+    POST /data-window/{data_window_id}
     Body: UpdateDataWindowParams
     """
     data_window_id = lambda_event.requestParameters.get("data_window_id")

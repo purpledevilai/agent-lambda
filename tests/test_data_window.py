@@ -98,7 +98,7 @@ class TestDataWindow(unittest.TestCase):
         }
         
         request = create_request(
-            method="PUT",
+            method="POST",
             path=f"/data-window/{data_window.data_window_id}",
             headers={"Authorization": access_token},
             body=update_body
