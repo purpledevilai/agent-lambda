@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 from Models import Agent, Tool
 from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, HumanMessage
 from LLM.BaseMessagesConverter import base_messages_to_dict_messages
+from Tools.ToolRegistry import tool_registry
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -116,9 +117,12 @@ def create_context(
         org_tools = Tool.get_tools_for_org(agent.org_id)
         org_tool_ids = [tool.tool_id for tool in org_tools]
         
+        # Get registered tool names
+        registered_tool_names = list(tool_registry.keys())
+        
         for init_tool in initialize_tools:
-            # Validate permissions
-            if init_tool.tool_id not in org_tool_ids:
+            # Validate permissions - tool must be either in org's tools OR in registered tools
+            if init_tool.tool_id not in org_tool_ids and init_tool.tool_id not in registered_tool_names:
                 raise Exception(f"Tool {init_tool.tool_id} does not belong to organization {agent.org_id}", 403)
             
             tools_to_initialize.append({
