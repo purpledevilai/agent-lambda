@@ -558,9 +558,15 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
             # Try API key authentication first
             if APIKey.validate_api_key(token):
                 contents = APIKey.get_api_key_contents(token)
-                # Mock CognitoUser with api_key_id as sub
+                
+                # Block client tokens from accessing this API
+                if contents.get("type", "client") == "client":
+                    raise Exception("Client tokens cannot access this API", 403)
+                
+                # Mock CognitoUser with user_id from token
+                # For org tokens, this is the api_key_id (self-referential)
                 user = CognitoUser(
-                    sub=contents["api_key_id"],
+                    sub=contents["user_id"],
                     email="",
                     family_name="API",
                     given_name="Key"

@@ -14,12 +14,15 @@ class APIKey(BaseModel):
     org_id: str
     token: str
     valid: bool
+    type: str  # "org" or "client"
+    user_id: str  # For org tokens: same as api_key_id, For client tokens: the creator's user_id
     created_at: int
     updated_at: int
 
-def create_api_key(org_id: str) -> APIKey:
+def create_org_api_key(org_id: str) -> APIKey:
     """
-    Create a new API key with a 100-year expiration JWT token.
+    Create an org token with 100-year expiration.
+    For org tokens, user_id is set to the api_key_id itself (self-referential).
     """
     api_key_id = str(uuid.uuid4())
     
@@ -28,7 +31,9 @@ def create_api_key(org_id: str) -> APIKey:
         secret=JWT_SECRET,
         contents={
             "api_key_id": api_key_id,
-            "org_id": org_id
+            "org_id": org_id,
+            "type": "org",
+            "user_id": api_key_id  # Self-referential for org tokens
         },
         expires_in=timedelta(days=365 * 100)  # 100 years
     )
@@ -40,6 +45,43 @@ def create_api_key(org_id: str) -> APIKey:
         org_id=org_id,
         token=token,
         valid=True,
+        type="org",
+        user_id=api_key_id,  # Self-referential
+        created_at=created_at,
+        updated_at=created_at
+    )
+    
+    put_item(API_KEYS_TABLE_NAME, api_key.model_dump())
+    return api_key
+
+def create_client_api_key(org_id: str, user_id: str) -> APIKey:
+    """
+    Create a client token with 2-minute expiration.
+    user_id is inherited from the creator (org token or cognito user).
+    """
+    api_key_id = str(uuid.uuid4())
+    
+    # Generate JWT with 2-minute expiration
+    token = generate_jwt(
+        secret=JWT_SECRET,
+        contents={
+            "api_key_id": api_key_id,
+            "org_id": org_id,
+            "type": "client",
+            "user_id": user_id  # Inherited from creator
+        },
+        expires_in=timedelta(minutes=2)
+    )
+    
+    created_at = int(datetime.now().timestamp())
+    
+    api_key = APIKey(
+        api_key_id=api_key_id,
+        org_id=org_id,
+        token=token,
+        valid=True,
+        type="client",
+        user_id=user_id,  # From creator
         created_at=created_at,
         updated_at=created_at
     )
@@ -109,4 +151,15 @@ def delete_api_key(api_key_id: str) -> None:
     Permanently delete an API key from the database.
     """
     delete_item(API_KEYS_TABLE_NAME, API_KEYS_PRIMARY_KEY, api_key_id)
+
+def get_api_key_type(token: str) -> str:
+    """
+    Extract the type from a valid API key token.
+    Returns "client" as default for safety.
+    """
+    try:
+        contents = get_api_key_contents(token)
+        return contents.get("type", "client")
+    except Exception:
+        return "client"
 
