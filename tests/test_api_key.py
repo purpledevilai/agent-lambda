@@ -10,8 +10,8 @@ from src.Models import APIKey, User, Agent
 
 class TestAPIKey(unittest.TestCase):
     
-    def test_generate_api_key(self):
-        """Test generating an API key"""
+    def test_generate_org_api_key(self):
+        """Test generating an org API key"""
         
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
@@ -19,7 +19,8 @@ class TestAPIKey(unittest.TestCase):
         org_id = user.organizations[0]
         
         body = {
-            "org_id": org_id
+            "org_id": org_id,
+            "type": "org"
         }
         
         request = create_request(
@@ -36,6 +37,8 @@ class TestAPIKey(unittest.TestCase):
         self.assertIn("api_key_id", res_body)
         self.assertIn("token", res_body)
         self.assertEqual(res_body["org_id"], org_id)
+        self.assertEqual(res_body["type"], "org")
+        self.assertEqual(res_body["user_id"], res_body["api_key_id"])  # Self-referential for org tokens
         self.assertTrue(res_body["valid"])
         
         # Store for cleanup
@@ -44,22 +47,119 @@ class TestAPIKey(unittest.TestCase):
         # Clean up
         APIKey.delete_api_key(api_key_id)
     
-    def test_generate_api_key_unauthorized_email(self):
-        """Test that non-authorized emails cannot generate API keys"""
-        # This test would need a different user token
-        # For now, we'll skip this as it requires a different test user
-        pass
-    
-    def test_authenticate_with_api_key(self):
-        """Test authenticating with an API key"""
+    def test_generate_client_api_key_with_org_token(self):
+        """Test generating a client token using an org token"""
         
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
         org_id = user.organizations[0]
         
-        # First, generate an API key
-        api_key = APIKey.create_api_key(org_id=org_id)
+        # First, create an org token
+        org_token = APIKey.create_org_api_key(org_id=org_id)
+        
+        try:
+            # Use org token to create client token
+            body = {
+                "org_id": org_id,
+                "type": "client"
+            }
+            
+            request = create_request(
+                method="POST",
+                path="/generate-api-key",
+                headers={"Authorization": org_token.token},
+                body=body
+            )
+            
+            result = lambda_handler(request, None)
+            self.assertEqual(result["statusCode"], 200)
+            
+            res_body = json.loads(result["body"])
+            self.assertIn("api_key_id", res_body)
+            self.assertIn("token", res_body)
+            self.assertEqual(res_body["org_id"], org_id)
+            self.assertEqual(res_body["type"], "client")
+            self.assertEqual(res_body["user_id"], org_token.user_id)  # Inherited from org token
+            self.assertTrue(res_body["valid"])
+            
+            # Clean up
+            APIKey.delete_api_key(res_body["api_key_id"])
+        finally:
+            APIKey.delete_api_key(org_token.api_key_id)
+    
+    def test_generate_client_api_key_with_cognito_user(self):
+        """Test generating a client token using a Cognito user"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        org_id = user.organizations[0]
+        
+        # Use cognito token to create client token
+        body = {
+            "org_id": org_id,
+            "type": "client"
+        }
+        
+        request = create_request(
+            method="POST",
+            path="/generate-api-key",
+            headers={"Authorization": access_token},
+            body=body
+        )
+        
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        
+        res_body = json.loads(result["body"])
+        self.assertIn("api_key_id", res_body)
+        self.assertIn("token", res_body)
+        self.assertEqual(res_body["org_id"], org_id)
+        self.assertEqual(res_body["type"], "client")
+        self.assertEqual(res_body["user_id"], cognito_user.sub)  # Inherited from cognito user
+        self.assertTrue(res_body["valid"])
+        
+        # Clean up
+        APIKey.delete_api_key(res_body["api_key_id"])
+    
+    def test_client_token_blocked_from_api(self):
+        """Test that client tokens are blocked from accessing this API"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        org_id = user.organizations[0]
+        
+        # Create a client token
+        client_token = APIKey.create_client_api_key(org_id=org_id, user_id=user.user_id)
+        
+        try:
+            # Try to use client token to access a protected endpoint
+            request = create_request(
+                method="GET",
+                path="/agents",
+                headers={"Authorization": client_token.token},
+                body={}
+            )
+            
+            result = lambda_handler(request, None)
+            self.assertEqual(result["statusCode"], 401)
+            
+        finally:
+            # Clean up
+            APIKey.delete_api_key(client_token.api_key_id)
+    
+    def test_authenticate_with_org_api_key(self):
+        """Test authenticating with an org API key"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        org_id = user.organizations[0]
+        
+        # First, generate an org API key
+        api_key = APIKey.create_org_api_key(org_id=org_id)
         
         try:
             # Use the API key token to access a protected endpoint
@@ -89,8 +189,8 @@ class TestAPIKey(unittest.TestCase):
         user = User.get_user(cognito_user.sub)
         org_id = user.organizations[0]
         
-        # Generate an API key
-        api_key = APIKey.create_api_key(org_id=org_id)
+        # Generate an org API key
+        api_key = APIKey.create_org_api_key(org_id=org_id)
         
         try:
             # Revoke it
@@ -110,16 +210,16 @@ class TestAPIKey(unittest.TestCase):
             # Clean up
             APIKey.delete_api_key(api_key.api_key_id)
     
-    def test_api_key_can_create_agent(self):
-        """Test that an API key can be used to create an agent"""
+    def test_org_api_key_can_create_agent(self):
+        """Test that an org API key can be used to create an agent"""
         
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
         org_id = user.organizations[0]
         
-        # Generate an API key
-        api_key = APIKey.create_api_key(org_id=org_id)
+        # Generate an org API key
+        api_key = APIKey.create_org_api_key(org_id=org_id)
         
         try:
             # Use API key to create an agent
@@ -167,7 +267,7 @@ class TestAPIKey(unittest.TestCase):
         user = User.get_user(cognito_user.sub)
         org_id = user.organizations[0]
         
-        api_key = APIKey.create_api_key(org_id=org_id)
+        api_key = APIKey.create_org_api_key(org_id=org_id)
         
         try:
             # Valid key should return True
@@ -191,31 +291,33 @@ class TestAPIKey(unittest.TestCase):
         user = User.get_user(cognito_user.sub)
         org_id = user.organizations[0]
         
-        api_key = APIKey.create_api_key(org_id=org_id)
+        api_key = APIKey.create_org_api_key(org_id=org_id)
         
         try:
             contents = APIKey.get_api_key_contents(api_key.token)
             self.assertEqual(contents["api_key_id"], api_key.api_key_id)
             self.assertEqual(contents["org_id"], org_id)
+            self.assertEqual(contents["type"], "org")
+            self.assertEqual(contents["user_id"], api_key.api_key_id)  # Self-referential for org tokens
         finally:
             APIKey.delete_api_key(api_key.api_key_id)
     
-    def test_user_get_with_api_key(self):
-        """Test that User.get_user() works with API key ID"""
+    def test_user_get_with_org_api_key(self):
+        """Test that User.get_user() works with org API key ID"""
         
         # Set up
         cognito_user = Cognito.get_user_from_cognito(access_token)
         user = User.get_user(cognito_user.sub)
         org_id = user.organizations[0]
         
-        api_key = APIKey.create_api_key(org_id=org_id)
+        api_key = APIKey.create_org_api_key(org_id=org_id)
         
         try:
             # Get "user" using API key ID
             mocked_user = User.get_user(api_key.api_key_id)
             
-            # Should return a mocked User with the API key's org
-            self.assertEqual(mocked_user.user_id, api_key.api_key_id)
+            # Should return a mocked User with the API key's user_id
+            self.assertEqual(mocked_user.user_id, api_key.user_id)
             self.assertEqual(mocked_user.organizations, [org_id])
         finally:
             APIKey.delete_api_key(api_key.api_key_id)
