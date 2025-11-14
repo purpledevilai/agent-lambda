@@ -39,9 +39,9 @@ def get_user(user_id: str) -> User:
         
         # Only return mocked user if API key is valid
         if api_key.valid:
-            # Create a mocked User with the API key's org_id
+            # Create a mocked User with the API key's details
             return User(
-                user_id=api_key.api_key_id,
+                user_id=api_key.user_id,  # Use the user_id from the API key
                 organizations=[api_key.org_id],
                 created_at=api_key.created_at,
                 updated_at=api_key.updated_at
