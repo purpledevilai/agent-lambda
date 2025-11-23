@@ -1087,3 +1087,264 @@ const sayHello(name: string) {
         # Clean up
         Agent.delete_agent(agent.agent_id)
 
+    def test_create_context_with_additional_agent_tools(self):
+        """Test creating a context with additional_agent_tools and verify they're available during invocation"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        
+        # Create a custom tool
+        custom_tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="custom_greeting",
+            description="A custom greeting tool",
+            code="def custom_greeting(name):\n  return f'Custom greeting for {name}!'"
+        )
+        
+        # Create agent WITHOUT the custom tool
+        agent = Agent.create_agent(
+            agent_name="test-agent-no-tools",
+            agent_description="agent without tools",
+            prompt="You are a helpful assistant. Call the custom_greeting tool with name='Alice'.",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[]  # No tools on the agent
+        )
+        
+        # Create context with additional_agent_tools
+        body = {
+            "agent_id": agent.agent_id,
+            "additional_agent_tools": [custom_tool.tool_id]
+        }
+        
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+        
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        res_body = json.loads(result["body"])
+        
+        # Verify context was created with additional_agent_tools
+        context = Context.get_context(res_body["context_id"])
+        self.assertIn("additional_agent_tools", context.model_dump())
+        self.assertEqual(context.additional_agent_tools, [custom_tool.tool_id])
+        
+        # Now invoke the agent and verify it can use the additional tool
+        chat_request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Please greet me"
+            },
+            headers={"Authorization": access_token}
+        )
+        
+        chat_result = lambda_handler(chat_request, None)
+        self.assertEqual(chat_result["statusCode"], 200)
+        chat_response = json.loads(chat_result["body"])
+        
+        # Verify the agent used the tool
+        self.assertIn("generated_messages", chat_response)
+        tool_calls = [msg for msg in chat_response["generated_messages"] if msg.get("type") == "tool_call"]
+        self.assertGreater(len(tool_calls), 0, "Agent should have called the custom tool")
+        self.assertEqual(tool_calls[0]["tool_name"], "custom_greeting")
+        
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(custom_tool.tool_id)
+
+    def test_create_context_with_additional_agent_tools_combines_with_agent_tools(self):
+        """Test that additional_agent_tools are combined with agent.tools and duplicates are removed"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        
+        # Create two custom tools
+        tool1 = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="tool_one",
+            description="First tool",
+            code="def tool_one():\n  return 'Tool one executed'"
+        )
+        
+        tool2 = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="tool_two",
+            description="Second tool",
+            code="def tool_two():\n  return 'Tool two executed'"
+        )
+        
+        # Create agent WITH tool1
+        agent = Agent.create_agent(
+            agent_name="test-agent-with-tool",
+            agent_description="agent with one tool",
+            prompt="You are a helpful assistant. Call tool_one and tool_two.",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[tool1.tool_id]  # Agent has tool1
+        )
+        
+        # Create context with additional_agent_tools containing tool2
+        body = {
+            "agent_id": agent.agent_id,
+            "additional_agent_tools": [tool2.tool_id]
+        }
+        
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+        
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        res_body = json.loads(result["body"])
+        
+        context = Context.get_context(res_body["context_id"])
+        
+        # Invoke the agent
+        chat_request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Please use the tools"
+            },
+            headers={"Authorization": access_token}
+        )
+        
+        chat_result = lambda_handler(chat_request, None)
+        self.assertEqual(chat_result["statusCode"], 200)
+        chat_response = json.loads(chat_result["body"])
+        
+        # Verify both tools are available (duplicate was removed)
+        tool_calls = [msg for msg in chat_response["generated_messages"] if msg.get("type") == "tool_call"]
+        tool_names = [tc["tool_name"] for tc in tool_calls]
+        
+        # Both tools should be available
+        self.assertIn("tool_one", tool_names)
+        self.assertIn("tool_two", tool_names)
+        
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(tool1.tool_id)
+        Tool.delete_tool(tool2.tool_id)
+
+    def test_create_context_with_additional_agent_tools_permission_error(self):
+        """Test that using a tool from another org in additional_agent_tools fails with permission error"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        
+        # Create agent
+        agent = Agent.create_agent(
+            agent_name="test-permission-agent-tools",
+            agent_description="agent for permission test",
+            prompt="You are a helpful assistant",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False
+        )
+        
+        # Try to use a tool that doesn't exist in user's org or registered tools
+        body = {
+            "agent_id": agent.agent_id,
+            "additional_agent_tools": ["non-existent-tool-id-99999"]
+        }
+        
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+        
+        result = lambda_handler(request, None)
+        # Should fail with 403 or 500 (permission error)
+        self.assertIn(result["statusCode"], [403, 500])
+        
+        error_body = json.loads(result["body"])
+        self.assertIn("error", error_body)
+        # The error message should mention the organization
+        self.assertTrue(
+            "organization" in error_body["error"].lower() or 
+            "not found" in error_body["error"].lower()
+        )
+        
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+
+    def test_create_context_with_registered_tool_in_additional_agent_tools(self):
+        """Test that registered tools (from tool_registry) can be used in additional_agent_tools"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        
+        # Create agent without any tools
+        agent = Agent.create_agent(
+            agent_name="test-agent-registered-tool",
+            agent_description="agent for testing registered tools",
+            prompt="You are a helpful assistant. Call the pass_event tool with type='test' and data='hello'.",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            tools=[]
+        )
+        
+        # Create context with a registered tool (pass_event) in additional_agent_tools
+        body = {
+            "agent_id": agent.agent_id,
+            "additional_agent_tools": ["pass_event"]  # Registered tool
+        }
+        
+        request = create_request(
+            method="POST",
+            path="/context",
+            headers={"Authorization": access_token},
+            body=body
+        )
+        
+        result = lambda_handler(request, None)
+        self.assertEqual(result["statusCode"], 200)
+        res_body = json.loads(result["body"])
+        
+        context = Context.get_context(res_body["context_id"])
+        
+        # Invoke the agent and verify it can use the registered tool
+        chat_request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Please trigger the event"
+            },
+            headers={"Authorization": access_token}
+        )
+        
+        chat_result = lambda_handler(chat_request, None)
+        self.assertEqual(chat_result["statusCode"], 200)
+        chat_response = json.loads(chat_result["body"])
+        
+        # Verify the agent used the registered tool
+        tool_calls = [msg for msg in chat_response["generated_messages"] if msg.get("type") == "tool_call"]
+        self.assertGreater(len(tool_calls), 0, "Agent should have called pass_event")
+        self.assertEqual(tool_calls[0]["tool_name"], "pass_event")
+        
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+

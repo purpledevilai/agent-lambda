@@ -23,7 +23,8 @@ def create_context_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
         user.sub if user != None else None,
         body.prompt_args,
         body.user_defined,
-        body.initialize_tools
+        body.initialize_tools,
+        body.additional_agent_tools
     )
 
     if (body.invoke_agent_message):
