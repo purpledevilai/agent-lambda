@@ -1,5 +1,5 @@
 from pydantic import Field, BaseModel
-from LLM.AgentChat import AgentTool
+from LLM.AgentTool import AgentTool
 from Models import DataWindow, Agent
 
 class open_data_window(BaseModel):

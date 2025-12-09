@@ -1,13 +1,8 @@
-from typing import List, Tuple, Callable, Any, Type
-from pydantic import BaseModel
+from typing import List
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage
-
-class AgentTool(BaseModel):
-  function: Callable[[Any], str]
-  params: Type[BaseModel]
-  pass_context: bool = False
+from LLM.AgentTool import AgentTool
 
 class AgentChat:
   def __init__(
@@ -46,16 +41,36 @@ class AgentChat:
     
     response = self.prompt_chain.invoke({"messages": self.messages})
     self.messages.append(response)
+    
     if len(response.tool_calls) > 0:
       for tool_call in response.tool_calls:
         try:
           tool = self.name_to_tool[tool_call["name"]]
-          tool_response = tool.function(**tool_call['args'], context=self.context) if tool.pass_context else tool.function(**tool_call['args'])
+          
+          # Build params starting with tool call args
+          params = {**tool_call['args']}
+          
+          # Add tool_call_id for async tools
+          if tool.is_async:
+            params['tool_call_id'] = tool_call['id']
+          
+          # Add context if tool needs it
+          if tool.pass_context:
+            params['context'] = self.context
+          
+          # Call the tool and get response
+          tool_response = tool.function(**params)
           tool_message = ToolMessage(tool_call_id=tool_call['id'], content=tool_response)
+          self.messages.append(tool_message)
+            
         except Exception as e:
+          # General error handling (e.g., tool not found)
           tool_message = ToolMessage(tool_call_id=tool_call['id'], content=f"Issue calling tool: {tool_call['name']}, error: {e}")
-        self.messages.append(tool_message)
+          self.messages.append(tool_message)
+      
+      # Recursively invoke after processing tool calls
       return self.invoke(load_data_windows=False)
+    
     return response.content
   
   def _refresh_data_windows(self):
