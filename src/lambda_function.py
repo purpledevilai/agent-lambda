@@ -89,6 +89,9 @@ from RequestHandlers.DataWindow.DeleteDataWindowHandler import delete_data_windo
 # APIKey
 from RequestHandlers.APIKey.GenerateAPIKeyHandler import generate_api_key_handler
 
+# Tool Response
+from RequestHandlers.ToolResponse.OnToolCallResponseHandler import on_tool_call_response_handler
+
 # JSON Documents
 from RequestHandlers.JSONDocument.CreateJSONDocumentHandler import create_json_document_handler
 from RequestHandlers.JSONDocument.GetJSONDocumentHandler import get_json_document_handler
@@ -501,6 +504,12 @@ handler_registry = {
     "/json-documents": {
         "GET": {
             "handler": get_json_documents_handler,
+            "public": False
+        }
+    },
+    "/on-tool-call-response": {
+        "POST": {
+            "handler": on_tool_call_response_handler,
             "public": False
         }
     },

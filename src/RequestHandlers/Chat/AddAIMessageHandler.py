@@ -33,6 +33,9 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
         context = Context.get_public_context(body.context_id)
         agent = Agent.get_public_agent(context.agent_id)
 
+    # Process any pending async tool responses
+    context = Context.process_async_tool_response_queue(context)
+    
     # If message just add it to the context and return
     if body.message:
         # Add it as an AI message to the context

@@ -24,6 +24,9 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         context = Context.get_public_context(body.context_id)
         agent = Agent.get_public_agent(context.agent_id)
 
+    # Process any pending async tool responses
+    context = Context.process_async_tool_response_queue(context)
+    
     # Add the human message to the context and save it immediately
     context = Context.add_human_message(context, body.message)
 
