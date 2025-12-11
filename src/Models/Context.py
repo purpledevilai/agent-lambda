@@ -294,7 +294,6 @@ def transform_messages_to_filtered(messages: list[dict], show_tool_calls: bool =
                 "sender": message["type"],
                 "message": message["content"]
             }))
-            continue
         if (show_tool_calls):
             if (message["type"] == "ai" and len(message["tool_calls"]) > 0):
                 for tool_call in message["tool_calls"]:
