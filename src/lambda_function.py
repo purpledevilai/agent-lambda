@@ -1,9 +1,11 @@
 import os
 import json
 import re
+import uuid
+import requests
 from typing import Optional
 from pydantic import BaseModel
-from AWS.Lambda import LambdaEvent
+from AWS.Lambda import LambdaEvent, invoke_lambda
 from AWS.Cognito import get_user_from_cognito, CognitoUser
 from AWS.APIGateway import create_api_gateway_response, APIGatewayResponse
 from AWS.CloudWatchLogs import get_logger
@@ -546,6 +548,33 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
     # Create a LambdaEvent object from the event
     lambda_event = LambdaEvent(**event)
 
+    # Check if we need to spawn an async callback invocation
+    # Only spawn if Callback-URL is present AND useCallbackUrl is not already set
+    callback_url = lambda_event.headers.get("Callback-URL")
+    if callback_url and not lambda_event.useCallbackUrl:
+        # Generate request_id or use the one provided in headers
+        request_id = lambda_event.headers.get("Callback-Request-ID") or str(uuid.uuid4())
+        
+        # Create async event with callback flags
+        async_event = {
+            **event,
+            "useCallbackUrl": True,
+            "requestId": request_id
+        }
+        
+        # Invoke this lambda asynchronously (fire-and-forget)
+        invoke_lambda(
+            lambda_name=os.environ["API_LAMBDA_NAME"],
+            event=async_event,
+            invokation_type="Event"
+        )
+        
+        # Return immediately with processing status
+        return create_api_gateway_response(202, {
+            "status": "processing",
+            "request_id": request_id
+        }, "application/json")
+
     try:
         # Get the request details
         request_path: str = lambda_event.path
@@ -595,14 +624,55 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
             user=user
         )
 
+        response_body = response.model_dump() if return_type == 'application/json' else response
+
+        # If this is an async callback invocation, POST to the callback URL instead of returning
+        if lambda_event.useCallbackUrl and callback_url:
+            callback_headers = {}
+            callback_token = lambda_event.headers.get("Callback-Token")
+            if callback_token:
+                callback_headers["Authorization"] = callback_token
+            
+            try:
+                requests.post(callback_url, json={
+                    "request_id": lambda_event.requestId,
+                    "status_code": 200,
+                    "response": response_body
+                }, headers=callback_headers, timeout=30)
+                logger.info(f"Callback POST successful to {callback_url}")
+            except Exception as callback_error:
+                logger.error(f"Failed to POST callback to {callback_url}: {callback_error}")
+            
+            return  # No response needed for async invocations
+
         # Return the response 
-        return create_api_gateway_response(200, response.model_dump() if return_type == 'application/json' else response, return_type)
+        return create_api_gateway_response(200, response_body, return_type)
             
 
     # Return any errors   
     except Exception as e:
         logger.error(str(e))
         error, code = e.args if len(e.args) == 2 else (e, 500)
+        
+        # If this is an async callback invocation, POST error to the callback URL
+        if lambda_event.useCallbackUrl and callback_url:
+            callback_headers = {}
+            callback_token = lambda_event.headers.get("Callback-Token")
+            if callback_token:
+                callback_headers["Authorization"] = callback_token
+            
+            try:
+                requests.post(callback_url, json={
+                    "request_id": lambda_event.requestId,
+                    "status_code": code,
+                    "error": str(error)
+                }, headers=callback_headers, timeout=30)
+                logger.info(f"Callback error POST successful to {callback_url}")
+            except Exception as callback_error:
+                logger.error(f"Failed to POST error callback to {callback_url}: {callback_error}")
+            
+            return  # No response needed for async invocations
+        
         return create_api_gateway_response(code, {
             'error': str(error)
         }, 'application/json')
