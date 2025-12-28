@@ -27,7 +27,7 @@ class open_memory_window(BaseModel):
     )
 
 
-def open_memory_window_func(document_id: str, path: str, context: dict) -> str:
+def open_memory_window_func(document_id: str, path: str = "", context: dict = {}) -> str:
     """
     Opens a Memory Window and returns its current data.
     
