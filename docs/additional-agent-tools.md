@@ -209,6 +209,7 @@ You can always use these built-in tools in `additional_agent_tools`:
 - `view_memory_shape` - View memory structure
 - `delete_memory` - Delete memory entries
 - `write_memory` - Write to memory
+- `open_memory_window` - Open a Memory Window for auto-refreshing memory data ([docs](./memory-window.md))
 - `web_search` - Search the web
 - `view_url` - View web page contents
 - `open_data_window` - Open a DataWindow for live data
