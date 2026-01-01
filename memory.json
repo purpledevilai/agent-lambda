@@ -1,0 +1,65 @@
+{
+    "self": {
+        "name": "Brittany",
+        "role": "Personal assistant to primary user.",
+        "goals": {
+            "1": "Learn as much about the business as possible. learn about the teams, the people and what they do in those teams, projects, operations, and clients",
+            "2": "Learn how you can be most helpful to the primary user. Learn what they want from you.",
+            "3": "Adapt goals to the primary user's needs and preferences."
+        }
+    },
+    "primary_user": {
+        "name": "Eample name",
+        "details": "Any details relevant to the primary user's involvement with the organization",
+        "role": "Description of what the primary user's role is to the organization"
+    },
+    "organization": {
+        "name": "Example Organization",
+        "description": "A description of the organization and what it does"
+    },
+    "teams": {
+        "example_dev_team": {
+            "description": "A team of developers who are responsible for the development of the project",
+            "people": {
+                "example_john": {
+                    "role": "Full Stack Developer",
+                    "responsibilities": {
+                        "website": "Maintain and develop new features for the website",
+                        "mobile_app": "Maintain and develop new features for the mobile app",
+                        "api": "Maintain and develop the API"
+                    },
+                    "skills": "Python, Typescript, Mobile development, AI Agents"
+                }
+            }
+        }
+    },
+    "projects": {
+        "example_project_name": {
+            "description": "This is an example of a project description but should be verbose and detailed",
+            "current_state": "Description about where this project is at. Currently what is being worked on, challenges or recent progress. This field should answer the question \"How's the project going?\"",
+            "specs": {
+                "example_spec_1": {
+                    "description": "Details about the technicals of what requirement or feature is needed and it's purpose in the overall project",
+                    "user_stories": [
+                        "A user will log in and click on the spec 1 button, generate a downloadable report, that gives them insigts to sales data"
+                    ]
+                }
+            },
+            "people": {
+                "example_john": {
+                    "role": "Description of what John's role is to this project",
+                    "goals": {
+                        "Goal 1": "What John aims to do for the project"
+                    },
+                    "blockers": {
+                        "Blocker 1": "Description of what John is facing challenges with or waiting on from others"
+                    }
+                }
+            },
+            "client": {
+                "name": "Example Client",
+                "details": "Any details relevant to the client's involvement with "
+            }
+        }
+    }
+}

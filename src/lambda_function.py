@@ -119,6 +119,10 @@ from RequestHandlers.Jira.JiraHandlers import (
     jira_get_issues_handler,
     jira_update_issue_handler,
 )
+from RequestHandlers.Gmail.GmailHandlers import (
+    gmail_auth_url_handler,
+    gmail_auth_code_handler,
+)
 
 
 
@@ -450,6 +454,19 @@ handler_registry = {
     "/jira/issues/{issue_id}": {
         "POST": {
             "handler": jira_update_issue_handler,
+            "public": False
+        }
+    },
+    # Gmail
+    "/gmail/auth-url": {
+        "GET": {
+            "handler": gmail_auth_url_handler,
+            "public": False
+        }
+    },
+    "/gmail/auth": {
+        "POST": {
+            "handler": gmail_auth_code_handler,
             "public": False
         }
     },
