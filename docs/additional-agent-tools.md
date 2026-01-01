@@ -213,6 +213,11 @@ You can always use these built-in tools in `additional_agent_tools`:
 - `web_search` - Search the web
 - `view_url` - View web page contents
 - `open_data_window` - Open a DataWindow for live data
+- `list_emails` - List emails from Gmail ([docs](./gmail-integration.md))
+- `get_email` - Get full email content from Gmail
+- `send_email` - Send email via Gmail
+- `mark_email_read` - Mark Gmail email as read
+- `mark_email_unread` - Mark Gmail email as unread
 
 ## Complete Implementation Example
 
