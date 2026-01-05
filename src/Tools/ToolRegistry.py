@@ -12,6 +12,12 @@ from Tools.WebSearchTools.view_url_jina import view_url_jina_tool
 
 from Tools.DataWindowTools.open_data_window import open_data_window_tool
 
+from Tools.GmailTools.list_emails import list_emails_tool
+from Tools.GmailTools.get_email import get_email_tool
+from Tools.GmailTools.send_email import send_email_tool
+from Tools.GmailTools.mark_email_read import mark_email_read_tool
+from Tools.GmailTools.mark_email_unread import mark_email_unread_tool
+
 tool_registry = {
     # Pass Event Tool
     "pass_event": pass_event_tool,
@@ -30,6 +36,13 @@ tool_registry = {
     # DataWindow Tools
     "open_data_window": open_data_window_tool,
 
-    # Open Memory Window Tool
+    # Memory Window Tool
     "open_memory_window": open_memory_window_tool,
+
+    # Gmail Tools
+    "list_emails": list_emails_tool,
+    "get_email": get_email_tool,
+    "send_email": send_email_tool,
+    "mark_email_read": mark_email_read_tool,
+    "mark_email_unread": mark_email_unread_tool,
 }
