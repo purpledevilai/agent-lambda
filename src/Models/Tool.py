@@ -13,6 +13,7 @@ from Tools import ToolRegistry
 
 TOOLS_TABLE_NAME = os.environ["TOOLS_TABLE_NAME"]
 TOOLS_PRIMARY_KEY = os.environ["TOOLS_PRIMARY_KEY"]
+EXECUTION_LAMBDA_NAME = os.environ["EXECUTION_LAMBDA_NAME"]
 
 
 class Tool(BaseModel):
@@ -106,7 +107,7 @@ def get_agent_tool_with_id(tool_id: str) -> AgentTool:
 
     def custom_code_lambda_invoke(**kwargs):
         response = invoke_lambda(
-            lambda_name="execution-lambda",
+            lambda_name=EXECUTION_LAMBDA_NAME,
             event={
                 "function_name": tool.name,
                 "code": tool.code,
