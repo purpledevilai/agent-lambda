@@ -10,7 +10,8 @@ def invoke_context(context: Context.Context, agent: Agent.Agent) -> Context.Cont
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=[Tool.get_agent_tool_with_id(tool) for tool in agent.tools] if agent.tools else [],
-        context=context.model_dump()
+        context=context.model_dump(),
+        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else []
     )
     agentChat.invoke()
 

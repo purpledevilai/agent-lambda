@@ -81,7 +81,8 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
         prompt=agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,
-        context=context_dict
+        context=context_dict,
+        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else []
     )
 
     # Invoke the agent (no human message added)
