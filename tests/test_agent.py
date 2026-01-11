@@ -544,6 +544,300 @@ class TestAgent(unittest.TestCase):
         Tool.delete_tool(tool.tool_id)
         Agent.delete_agent(agent.agent_id)
         Context.delete_context(context.context_id)
-    
+
+    def test_create_agent_with_prompt_arg_names_new_style(self):
+        """Test creating an agent with new ARG_* style prompt_arg_names (no brackets)"""
+        
+        # Create agent with ARG_* style prompt_arg_names
+        create_agent_body = {
+            "agent_name": "Test Agent with Args",
+            "agent_description": "Test Description",
+            "prompt": "Hello ARG_USER_NAME, you are located in ARG_LOCATION",
+            "is_public": False,
+            "agent_speaks_first": False,
+            "uses_prompt_args": True,
+            "prompt_arg_names": ["ARG_USER_NAME", "ARG_LOCATION"]
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/agent",
+            headers={
+                "Authorization": access_token
+            },
+            body=create_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+
+        # Check for prompt_arg_names
+        self.assertEqual(res_body["prompt_arg_names"], ["ARG_USER_NAME", "ARG_LOCATION"])
+        self.assertEqual(res_body["uses_prompt_args"], True)
+
+        # Clean up
+        Agent.delete_agent(res_body["agent_id"])
+
+    def test_create_agent_with_prompt_arg_names_legacy_style(self):
+        """Test creating an agent with legacy {name} style - brackets included in arg names"""
+        
+        # Create agent with legacy style - note: brackets are PART of the arg name
+        create_agent_body = {
+            "agent_name": "Test Agent Legacy Style",
+            "agent_description": "Test Description",
+            "prompt": "Hello {name}, you are located in {location}",
+            "is_public": False,
+            "agent_speaks_first": False,
+            "uses_prompt_args": True,
+            "prompt_arg_names": ["{name}", "{location}"]  # Brackets included!
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path="/agent",
+            headers={
+                "Authorization": access_token
+            },
+            body=create_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+
+        # Check for prompt_arg_names - brackets should be preserved
+        self.assertEqual(res_body["prompt_arg_names"], ["{name}", "{location}"])
+
+        # Clean up
+        Agent.delete_agent(res_body["agent_id"])
+
+    def test_agent_with_prompt_args_and_json_in_prompt(self):
+        """Test that prompt args work correctly when prompt contains JSON examples"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create agent with JSON in prompt and prompt_arg_names using NEW style (ARG_*)
+        # This demonstrates that JSON curly brackets are NOT affected
+        prompt_with_json = """You are an assistant for ARG_USER_NAME.
+
+When responding with data, use this JSON format:
+{"status": "success", "data": {"key": "value"}}
+
+Always include the user's name in responses."""
+
+        agent = Agent.create_agent(
+            agent_name="JSON Prompt Agent",
+            agent_description="Agent with JSON in prompt",
+            prompt=prompt_with_json,
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            uses_prompt_args=True,
+            prompt_arg_names=["ARG_USER_NAME"]
+        )
+
+        # Create context with prompt_args
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id,
+            prompt_args={"ARG_USER_NAME": "Alice"}
+        )
+
+        # Create a chat request
+        request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Hello! What's my name?"
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda function - this should NOT error due to JSON curly brackets
+        result = lambda_handler(request, None)
+
+        # Check the response - should be 200 (not a format error)
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        self.assertIn("response", response)
+        # The response should mention Alice since that's the user_name arg
+        print(f"Response: {response['response']}")
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+        Context.delete_context(context.context_id)
+
+    def test_agent_with_legacy_prompt_args_and_json_in_prompt(self):
+        """Test legacy {name} style with JSON in prompt - brackets included in arg names"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create agent with JSON in prompt using LEGACY style
+        # The {user_name} will be replaced, but {"status": ...} won't be because
+        # only the exact strings in prompt_arg_names are replaced
+        prompt_with_json = """You are an assistant for {user_name}.
+
+When responding with data, use this JSON format:
+{"status": "success", "data": {"key": "value"}}
+
+Always include the user's name in responses."""
+
+        agent = Agent.create_agent(
+            agent_name="JSON Prompt Agent Legacy",
+            agent_description="Agent with JSON in prompt - legacy style",
+            prompt=prompt_with_json,
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            uses_prompt_args=True,
+            prompt_arg_names=["{user_name}"]  # Brackets included!
+        )
+
+        # Create context with prompt_args - key includes brackets to match
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id,
+            prompt_args={"{user_name}": "Bob"}  # Key matches the prompt_arg_name
+        )
+
+        # Create a chat request
+        request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Hello! What's my name?"
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda function - JSON should be preserved
+        result = lambda_handler(request, None)
+
+        # Check the response - should be 200
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        self.assertIn("response", response)
+        print(f"Response: {response['response']}")
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+        Context.delete_context(context.context_id)
+
+    def test_agent_with_prompt_arg_names_backwards_compatibility(self):
+        """Test that agents without prompt_arg_names still work (backwards compatibility)"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+
+        # Create agent without prompt_arg_names (old style)
+        agent = Agent.create_agent(
+            agent_name="Old Style Agent",
+            agent_description="Agent without prompt_arg_names",
+            prompt="You are a helpful assistant.",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False
+            # Note: no prompt_arg_names specified
+        )
+
+        # Verify prompt_arg_names defaults to empty list
+        self.assertEqual(agent.prompt_arg_names, [])
+
+        # Create context
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+
+        # Create a chat request - should work without errors
+        request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Hello!"
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+
+        # Call the lambda function
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
+        Context.delete_context(context.context_id)
+
+    def test_update_agent_with_prompt_arg_names(self):
+        """Test updating an agent's prompt_arg_names"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        agent = Agent.create_agent(
+            agent_name="Test Agent",
+            agent_description="Test Description",
+            prompt="Hello ARG_NAME from ARG_CITY",
+            org_id=user.organizations[0],
+            is_public=False,
+            agent_speaks_first=False,
+            uses_prompt_args=True,
+            prompt_arg_names=["ARG_NAME"]  # Initially only has ARG_NAME
+        )
+
+        # Update to add ARG_CITY to prompt_arg_names
+        update_agent_body = {
+            "prompt_arg_names": ["ARG_NAME", "ARG_CITY"]
+        }
+
+        # Create request
+        request = create_request(
+            method="POST",
+            path=f"/agent/{agent.agent_id}",
+            headers={
+                "Authorization": access_token
+            },
+            body=update_agent_body
+        )
+
+        # Call the lambda handler
+        result = lambda_handler(request, None)
+
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+
+        res_body = json.loads(result["body"])
+
+        # Check for updated prompt_arg_names
+        self.assertEqual(res_body["prompt_arg_names"], ["ARG_NAME", "ARG_CITY"])
+
+        # Clean up
+        Agent.delete_agent(agent.agent_id)
 
     

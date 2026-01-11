@@ -27,6 +27,7 @@ def create_agent_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Agent.
         agent_speaks_first=body.agent_speaks_first,
         tools=body.tools,
         uses_prompt_args=True if body.uses_prompt_args else False,
+        prompt_arg_names=body.prompt_arg_names if body.prompt_arg_names else [],
         initialize_tool_id=body.initialize_tool_id
     )
 
