@@ -462,7 +462,8 @@ const sayHello(name: string) {
             prompt=agent.prompt,
             messages=context.messages,
             tools=[],
-            context=context.model_dump()
+            context=context.model_dump(),
+            prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else []
         )
 
         # Add human message
@@ -479,7 +480,8 @@ const sayHello(name: string) {
             prompt=agent.prompt,
             messages=dict_messages_to_base_messages(context.messages),
             tools=[],
-            context=context.model_dump()
+            context=context.model_dump(),
+            prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else []
         )
 
         # Invoke the agent chat
