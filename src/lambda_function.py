@@ -123,6 +123,10 @@ from RequestHandlers.Gmail.GmailHandlers import (
     gmail_auth_url_handler,
     gmail_auth_code_handler,
 )
+from RequestHandlers.Outlook.OutlookHandlers import (
+    outlook_auth_url_handler,
+    outlook_auth_code_handler,
+)
 
 
 
@@ -467,6 +471,19 @@ handler_registry = {
     "/gmail/auth": {
         "POST": {
             "handler": gmail_auth_code_handler,
+            "public": False
+        }
+    },
+    # Outlook
+    "/outlook/auth-url": {
+        "GET": {
+            "handler": outlook_auth_url_handler,
+            "public": False
+        }
+    },
+    "/outlook/auth": {
+        "POST": {
+            "handler": outlook_auth_code_handler,
             "public": False
         }
     },
