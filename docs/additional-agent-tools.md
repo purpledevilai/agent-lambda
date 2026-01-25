@@ -204,6 +204,8 @@ Result when agent is invoked:
 You can always use these built-in tools in `additional_agent_tools`:
 
 - `pass_event` - Pass custom events to the frontend
+- `get_time` - Get current date/time in UTC or a specified timezone ([docs](./utility-tools.md))
+- `think` - Organize reasoning and plan actions before execution ([docs](./utility-tools.md))
 - `append_memory` - Append data to memory
 - `read_memory` - Read from memory
 - `view_memory_shape` - View memory structure
