@@ -189,7 +189,8 @@ def create_event(
     location: str = None,
     attendees: list = None,
     timezone: str = None,
-    all_day: bool = False
+    all_day: bool = False,
+    recurrence: list = None
 ):
     """
     Create a new calendar event.
@@ -205,6 +206,7 @@ def create_event(
         attendees: List of attendee email addresses (optional)
         timezone: Timezone for the event (optional, e.g., "America/New_York")
         all_day: Whether this is an all-day event (default False)
+        recurrence: List of RRULE strings for recurring events (optional)
     
     Returns:
         Created event data
@@ -233,6 +235,8 @@ def create_event(
         event_body["location"] = location
     if attendees:
         event_body["attendees"] = [{"email": email} for email in attendees]
+    if recurrence:
+        event_body["recurrence"] = recurrence
     
     return calendar_api_request(
         integration_id,
@@ -253,7 +257,8 @@ def update_event(
     location: str = None,
     attendees: list = None,
     timezone: str = None,
-    all_day: bool = None
+    all_day: bool = None,
+    recurrence: list = None
 ):
     """
     Update an existing calendar event.
@@ -270,6 +275,7 @@ def update_event(
         attendees: New list of attendee email addresses (optional)
         timezone: Timezone for the event (optional)
         all_day: Whether this is an all-day event (optional)
+        recurrence: List of RRULE strings for recurring events (optional, set to empty list to remove recurrence)
     
     Returns:
         Updated event data
@@ -284,6 +290,8 @@ def update_event(
         event_body["location"] = location
     if attendees is not None:
         event_body["attendees"] = [{"email": email} for email in attendees]
+    if recurrence is not None:
+        event_body["recurrence"] = recurrence
     
     # Handle time updates
     if start_time is not None:

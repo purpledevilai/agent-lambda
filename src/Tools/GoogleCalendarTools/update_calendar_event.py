@@ -19,12 +19,22 @@ class update_calendar_event(BaseModel):
     
     Note: When changing between timed and all-day events, provide both start_time and end_time
     with the appropriate format, and set all_day accordingly.
+    
+    Recurrence examples (RRULE format):
+    - Daily: ['RRULE:FREQ=DAILY']
+    - Weekly on Mon/Wed/Fri: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR']
+    - Every 2 weeks: ['RRULE:FREQ=WEEKLY;INTERVAL=2']
+    - Remove recurrence: [] (empty list)
+    
+    Note: To update a recurring event series, use the recurring event ID (not an instance ID).
     """
     integration_id: str = Field(description="The Google Calendar integration ID to use for authentication.")
-    event_id: str = Field(description="The unique ID of the event to update.")
+    event_id: str = Field(description="The unique ID of the event to update. For recurring events, use the series ID to update all instances.")
     calendar_id: Optional[str] = Field(
         default="primary",
-        description="The calendar ID the event belongs to. Use 'primary' for the user's main calendar."
+        description="The calendar ID the event belongs to. Use 'primary' for the user's main calendar. "
+                    "For other calendars, use the FULL calendar ID including the domain "
+                    "(e.g., 'abc123@group.calendar.google.com'), not just the hash portion."
     )
     summary: Optional[str] = Field(
         default=None,
@@ -58,6 +68,12 @@ class update_calendar_event(BaseModel):
         default=None,
         description="Set to True if updating to an all-day event, False for timed event."
     )
+    recurrence: Optional[List[str]] = Field(
+        default=None,
+        description="List of RRULE strings for recurring events. Set to empty list [] to remove recurrence. "
+                    "Common patterns: 'RRULE:FREQ=DAILY', 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR', "
+                    "'RRULE:FREQ=MONTHLY;BYMONTHDAY=15', 'RRULE:FREQ=WEEKLY;COUNT=10'."
+    )
 
 
 def update_calendar_event_func(
@@ -71,7 +87,8 @@ def update_calendar_event_func(
     location: str = None,
     attendees: List[str] = None,
     timezone: str = None,
-    all_day: bool = None
+    all_day: bool = None,
+    recurrence: List[str] = None
 ) -> str:
     """
     Update an existing calendar event.
@@ -88,6 +105,7 @@ def update_calendar_event_func(
         attendees: New list of attendee emails
         timezone: Event timezone
         all_day: Whether this is an all-day event
+        recurrence: List of RRULE strings (empty list removes recurrence)
         
     Returns:
         JSON string with updated event details
@@ -108,10 +126,11 @@ def update_calendar_event_func(
         location=location,
         attendees=attendees,
         timezone=timezone,
-        all_day=all_day
+        all_day=all_day,
+        recurrence=recurrence
     )
     
-    return json.dumps({
+    response = {
         "status": "updated",
         "event_id": result.get("id"),
         "summary": result.get("summary"),
@@ -119,7 +138,13 @@ def update_calendar_event_func(
         "start": result.get("start"),
         "end": result.get("end"),
         "updated": result.get("updated"),
-    }, indent=2)
+    }
+    
+    if result.get("recurrence"):
+        response["recurrence"] = result.get("recurrence")
+        response["is_recurring"] = True
+    
+    return json.dumps(response, indent=2)
 
 
 update_calendar_event_tool = AgentTool(params=update_calendar_event, function=update_calendar_event_func, pass_context=False)
