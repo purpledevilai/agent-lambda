@@ -7,7 +7,7 @@ from Services import GoogleCalendarService
 
 class create_calendar_event(BaseModel):
     """
-    Create a new event in Google Calendar. Supports both timed events and all-day events.
+    Create a new event in Google Calendar. Supports timed events, all-day events, and recurring events.
     
     Time format examples (RFC3339 for timed events):
     - With timezone offset: '2026-01-25T10:00:00-05:00' (Eastern Time)
@@ -20,6 +20,15 @@ class create_calendar_event(BaseModel):
     - 1-hour meeting: start='2026-01-25T10:00:00Z', end='2026-01-25T11:00:00Z', all_day=False
     - All-day event: start='2026-01-25', end='2026-01-26', all_day=True (end date is exclusive)
     - Multi-day event: start='2026-01-25', end='2026-01-28', all_day=True (3 days)
+    
+    Recurrence examples (RRULE format):
+    - Daily: ['RRULE:FREQ=DAILY']
+    - Every weekday: ['RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR']
+    - Weekly on Monday & Wednesday: ['RRULE:FREQ=WEEKLY;BYDAY=MO,WE']
+    - Every 2 weeks: ['RRULE:FREQ=WEEKLY;INTERVAL=2']
+    - Monthly on the 15th: ['RRULE:FREQ=MONTHLY;BYMONTHDAY=15']
+    - Weekly for 10 occurrences: ['RRULE:FREQ=WEEKLY;COUNT=10']
+    - Daily until a date: ['RRULE:FREQ=DAILY;UNTIL=20260331T000000Z']
     """
     integration_id: str = Field(description="The Google Calendar integration ID to use for authentication.")
     summary: str = Field(description="The title/summary of the event.")
@@ -53,6 +62,16 @@ class create_calendar_event(BaseModel):
         default=False,
         description="Set to True for all-day events. When True, use date format (YYYY-MM-DD) for start_time and end_time."
     )
+    recurrence: Optional[List[str]] = Field(
+        default=None,
+        description="List of RRULE strings for recurring events. Common patterns: "
+                    "'RRULE:FREQ=DAILY' (daily), "
+                    "'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR' (Mon/Wed/Fri), "
+                    "'RRULE:FREQ=WEEKLY;INTERVAL=2' (every 2 weeks), "
+                    "'RRULE:FREQ=MONTHLY;BYMONTHDAY=15' (15th of month), "
+                    "'RRULE:FREQ=WEEKLY;COUNT=10' (10 occurrences), "
+                    "'RRULE:FREQ=DAILY;UNTIL=20260331T000000Z' (until date)."
+    )
 
 
 def create_calendar_event_func(
@@ -65,7 +84,8 @@ def create_calendar_event_func(
     location: str = None,
     attendees: List[str] = None,
     timezone: str = None,
-    all_day: bool = False
+    all_day: bool = False,
+    recurrence: List[str] = None
 ) -> str:
     """
     Create a new calendar event.
@@ -81,6 +101,7 @@ def create_calendar_event_func(
         attendees: List of attendee emails
         timezone: Event timezone
         all_day: Whether this is an all-day event
+        recurrence: List of RRULE strings for recurring events
         
     Returns:
         JSON string with created event details
@@ -104,10 +125,11 @@ def create_calendar_event_func(
         location=location,
         attendees=attendees,
         timezone=timezone,
-        all_day=all_day
+        all_day=all_day,
+        recurrence=recurrence
     )
     
-    return json.dumps({
+    response = {
         "status": "created",
         "event_id": result.get("id"),
         "summary": result.get("summary"),
@@ -115,7 +137,13 @@ def create_calendar_event_func(
         "start": result.get("start"),
         "end": result.get("end"),
         "attendees_count": len(result.get("attendees", [])),
-    }, indent=2)
+    }
+    
+    if result.get("recurrence"):
+        response["recurrence"] = result.get("recurrence")
+        response["is_recurring"] = True
+    
+    return json.dumps(response, indent=2)
 
 
 create_calendar_event_tool = AgentTool(params=create_calendar_event, function=create_calendar_event_func, pass_context=False)
