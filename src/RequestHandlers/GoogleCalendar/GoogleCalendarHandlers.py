@@ -11,37 +11,36 @@ from Models import Integration, User
 
 logger = get_logger(log_level=os.environ.get("LOG_LEVEL", "INFO"))
 
-GMAIL_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-GMAIL_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 
-# Gmail scopes for read, send, and modify (mark read/unread)
-GMAIL_SCOPES = [
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/gmail.modify",
+# Google Calendar scopes for event CRUD and calendar viewing
+GOOGLE_CALENDAR_SCOPES = [
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/calendar.readonly",
 ]
 
 
-class GmailAuthUrlResponse(BaseModel):
+class GoogleCalendarAuthUrlResponse(BaseModel):
     auth_url: str
 
 
-class GmailAuthResponse(BaseModel):
+class GoogleCalendarAuthResponse(BaseModel):
     integration_id: str
     type: str
     email: str
 
 
-def gmail_auth_url_handler(lambda_event: LambdaEvent, user: CognitoUser) -> GmailAuthUrlResponse:
+def google_calendar_auth_url_handler(lambda_event: LambdaEvent, user: CognitoUser) -> GoogleCalendarAuthUrlResponse:
     """
-    Generate the Gmail OAuth authorization URL.
+    Generate the Google Calendar OAuth authorization URL.
     
     Query params:
         org_id (optional): The organization ID to associate the integration with
         state (optional): State parameter to pass through OAuth flow
     
     Returns:
-        auth_url: The URL to redirect the user to for Gmail authorization
+        auth_url: The URL to redirect the user to for Google Calendar authorization
     """
     db_user = User.get_user(user.sub)
     if len(db_user.organizations) == 0:
@@ -63,21 +62,21 @@ def gmail_auth_url_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Gmai
     
     params = {
         "client_id": os.environ["GOOGLE_CLIENT_ID"],
-        "redirect_uri": os.environ["GMAIL_REDIRECT_URI"],
+        "redirect_uri": os.environ["GOOGLE_CALENDAR_REDIRECT_URI"],
         "response_type": "code",
-        "scope": " ".join(GMAIL_SCOPES),
+        "scope": " ".join(GOOGLE_CALENDAR_SCOPES),
         "access_type": "offline",  # Required to get refresh_token
         "prompt": "consent",  # Force consent to ensure refresh_token
         "state": state,
     }
     
-    auth_url = f"{GMAIL_AUTH_URL}?{urlencode(params)}"
-    return GmailAuthUrlResponse(auth_url=auth_url)
+    auth_url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
+    return GoogleCalendarAuthUrlResponse(auth_url=auth_url)
 
 
-def gmail_auth_code_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Integration.Integration:
+def google_calendar_auth_code_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Integration.Integration:
     """
-    Exchange the authorization code for tokens and create/update the Gmail integration.
+    Exchange the authorization code for tokens and create/update the Google Calendar integration.
     
     Request body:
         code: The authorization code from Google OAuth
@@ -86,7 +85,7 @@ def gmail_auth_code_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Int
         org_id (optional): The organization ID to associate the integration with
     
     Returns:
-        The created or updated Gmail integration
+        The created or updated Google Calendar integration
     """
     body = json.loads(lambda_event.body)
     code = body.get("code")
@@ -112,13 +111,13 @@ def gmail_auth_code_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Int
         "client_id": os.environ["GOOGLE_CLIENT_ID"],
         "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
         "code": code,
-        "redirect_uri": os.environ["GMAIL_REDIRECT_URI"],
+        "redirect_uri": os.environ["GOOGLE_CALENDAR_REDIRECT_URI"],
     }
     
-    resp = requests.post(GMAIL_TOKEN_URL, data=payload)
+    resp = requests.post(GOOGLE_TOKEN_URL, data=payload)
     if resp.status_code != 200:
-        logger.error(f"Failed to exchange Gmail auth code: {resp.text}")
-        raise Exception(f"Failed to exchange Gmail auth code: {resp.text}", resp.status_code)
+        logger.error(f"Failed to exchange Google Calendar auth code: {resp.text}")
+        raise Exception(f"Failed to exchange Google Calendar auth code: {resp.text}", resp.status_code)
     
     data = resp.json()
     
@@ -134,40 +133,52 @@ def gmail_auth_code_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Int
         "email": email,
     }
     
-    # Check if Gmail integration already exists for this org
-    gmail_integration = None
+    # Check if Google Calendar integration already exists for this org
+    calendar_integration = None
     for integ in Integration.get_integrations_in_org(org_id):
-        if integ.type == "gmail":
+        if integ.type == "google_calendar":
             # Check if it's the same email account
             if integ.integration_config.get("email") == email:
-                gmail_integration = integ
+                calendar_integration = integ
                 break
     
-    if gmail_integration:
+    if calendar_integration:
         # Update existing integration
-        gmail_integration.integration_config = integration_config
-        Integration.save_integration(gmail_integration)
+        calendar_integration.integration_config = integration_config
+        Integration.save_integration(calendar_integration)
     else:
         # Create new integration
-        gmail_integration = Integration.create_integration(
+        calendar_integration = Integration.create_integration(
             org_id=org_id,
-            type="gmail",
+            type="google_calendar",
             integration_config=integration_config
         )
     
-    return gmail_integration
+    return calendar_integration
 
 
 def _get_user_email(access_token: str) -> str:
-    """Get the authenticated user's email address."""
+    """Get the authenticated user's email address using the Calendar API."""
+    # First try to get from calendar settings
     resp = requests.get(
-        "https://gmail.googleapis.com/gmail/v1/users/me/profile",
+        "https://www.googleapis.com/calendar/v3/calendars/primary",
         headers={"Authorization": f"Bearer {access_token}"}
     )
-    if resp.status_code != 200:
-        logger.error(f"Failed to get user email: {resp.text}")
-        return "unknown"
+    if resp.status_code == 200:
+        data = resp.json()
+        email = data.get("id")  # Primary calendar ID is the user's email
+        if email and "@" in email:
+            return email
     
-    data = resp.json()
-    return data.get("emailAddress", "unknown")
+    # Fallback: try userinfo endpoint
+    resp = requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    if resp.status_code == 200:
+        data = resp.json()
+        return data.get("email", "unknown")
+    
+    logger.error(f"Failed to get user email: {resp.text}")
+    return "unknown"
 

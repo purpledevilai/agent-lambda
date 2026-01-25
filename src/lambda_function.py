@@ -127,6 +127,10 @@ from RequestHandlers.Outlook.OutlookHandlers import (
     outlook_auth_url_handler,
     outlook_auth_code_handler,
 )
+from RequestHandlers.GoogleCalendar.GoogleCalendarHandlers import (
+    google_calendar_auth_url_handler,
+    google_calendar_auth_code_handler,
+)
 
 
 
@@ -484,6 +488,19 @@ handler_registry = {
     "/outlook/auth": {
         "POST": {
             "handler": outlook_auth_code_handler,
+            "public": False
+        }
+    },
+    # Google Calendar
+    "/google-calendar/auth-url": {
+        "GET": {
+            "handler": google_calendar_auth_url_handler,
+            "public": False
+        }
+    },
+    "/google-calendar/auth": {
+        "POST": {
+            "handler": google_calendar_auth_code_handler,
             "public": False
         }
     },
