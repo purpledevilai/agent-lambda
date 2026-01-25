@@ -27,7 +27,9 @@ class list_calendar_events(BaseModel):
     integration_id: str = Field(description="The Google Calendar integration ID to use for authentication.")
     calendar_id: Optional[str] = Field(
         default="primary",
-        description="The calendar ID to list events from. Use 'primary' for the user's main calendar."
+        description="The calendar ID to list events from. Use 'primary' for the user's main calendar. "
+                    "For other calendars, use the FULL calendar ID including the domain "
+                    "(e.g., 'abc123@group.calendar.google.com'), not just the hash portion."
     )
     time_min: Optional[str] = Field(
         default=None,

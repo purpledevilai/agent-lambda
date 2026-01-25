@@ -32,7 +32,9 @@ class update_calendar_event(BaseModel):
     event_id: str = Field(description="The unique ID of the event to update. For recurring events, use the series ID to update all instances.")
     calendar_id: Optional[str] = Field(
         default="primary",
-        description="The calendar ID the event belongs to. Use 'primary' for the user's main calendar."
+        description="The calendar ID the event belongs to. Use 'primary' for the user's main calendar. "
+                    "For other calendars, use the FULL calendar ID including the domain "
+                    "(e.g., 'abc123@group.calendar.google.com'), not just the hash portion."
     )
     summary: Optional[str] = Field(
         default=None,

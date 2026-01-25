@@ -40,7 +40,9 @@ class create_calendar_event(BaseModel):
     )
     calendar_id: Optional[str] = Field(
         default="primary",
-        description="The calendar ID to create the event in. Use 'primary' for the user's main calendar."
+        description="The calendar ID to create the event in. Use 'primary' for the user's main calendar. "
+                    "For other calendars, use the FULL calendar ID including the domain "
+                    "(e.g., 'abc123@group.calendar.google.com'), not just the hash portion."
     )
     description: Optional[str] = Field(
         default=None,
