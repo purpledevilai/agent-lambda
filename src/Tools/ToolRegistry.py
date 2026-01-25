@@ -1,5 +1,9 @@
 from Tools.PassEvent import pass_event_tool
 
+# Utility Tools
+from Tools.UtilityTools.get_time import get_time_tool
+from Tools.UtilityTools.think import think_tool
+
 from Tools.MemoryTools.append_memory import append_memory_tool
 from Tools.MemoryTools.read_memory import read_memory_tool
 from Tools.MemoryTools.view_memory_shape import view_memory_shape_tool
@@ -69,6 +73,10 @@ from Tools.GoogleCalendarTools.list_calendars import list_calendars_tool
 tool_registry = {
     # Pass Event Tool
     "pass_event": pass_event_tool,
+
+    # Utility Tools
+    "get_time": get_time_tool,
+    "think": think_tool,
 
     # Memory Tools
     "append_memory": append_memory_tool,
