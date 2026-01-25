@@ -58,6 +58,14 @@ from Tools.OutlookTools.trash_outlook_email import trash_outlook_email_tool
 from Tools.OutlookTools.untrash_outlook_email import untrash_outlook_email_tool
 from Tools.OutlookTools.delete_outlook_email import delete_outlook_email_tool
 
+# Google Calendar Tools
+from Tools.GoogleCalendarTools.list_calendar_events import list_calendar_events_tool
+from Tools.GoogleCalendarTools.get_calendar_event import get_calendar_event_tool
+from Tools.GoogleCalendarTools.create_calendar_event import create_calendar_event_tool
+from Tools.GoogleCalendarTools.update_calendar_event import update_calendar_event_tool
+from Tools.GoogleCalendarTools.delete_calendar_event import delete_calendar_event_tool
+from Tools.GoogleCalendarTools.list_calendars import list_calendars_tool
+
 tool_registry = {
     # Pass Event Tool
     "pass_event": pass_event_tool,
@@ -125,4 +133,12 @@ tool_registry = {
     "trash_outlook_email": trash_outlook_email_tool,
     "untrash_outlook_email": untrash_outlook_email_tool,
     "delete_outlook_email": delete_outlook_email_tool,
+
+    # Google Calendar Tools
+    "list_calendar_events": list_calendar_events_tool,
+    "get_calendar_event": get_calendar_event_tool,
+    "create_calendar_event": create_calendar_event_tool,
+    "update_calendar_event": update_calendar_event_tool,
+    "delete_calendar_event": delete_calendar_event_tool,
+    "list_calendars": list_calendars_tool,
 }
