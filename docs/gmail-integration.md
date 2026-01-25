@@ -42,8 +42,11 @@ Before using the Gmail integration, you need to set up a Google Cloud project:
 Add these environment variables to your Lambda:
 
 ```bash
-GMAIL_CLIENT_ID=your-client-id
-GMAIL_CLIENT_SECRET=your-client-secret
+# Shared Google OAuth credentials (used by Gmail and Google Calendar)
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# Gmail-specific redirect URI
 GMAIL_REDIRECT_URI=https://yourapp.com/gmail/callback
 ```
 
@@ -850,6 +853,7 @@ Common errors:
 
 ## Related Documentation
 
+- [Google Calendar Integration](./google-calendar-integration.md) - Calendar integration using the same OAuth app
 - [Additional Agent Tools](./additional-agent-tools.md) - Built-in tool reference
 - [Initialize Tools](./initialize-tools.md) - Pre-populate context with tool results
 
