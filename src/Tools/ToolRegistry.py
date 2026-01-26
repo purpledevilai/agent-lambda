@@ -70,6 +70,11 @@ from Tools.GoogleCalendarTools.update_calendar_event import update_calendar_even
 from Tools.GoogleCalendarTools.delete_calendar_event import delete_calendar_event_tool
 from Tools.GoogleCalendarTools.list_calendars import list_calendars_tool
 
+# Google Maps Tools
+from Tools.GoogleMapsTools.search_places import search_places_tool
+from Tools.GoogleMapsTools.get_place_details import get_place_details_tool
+from Tools.GoogleMapsTools.compute_routes import compute_routes_tool
+
 tool_registry = {
     # Pass Event Tool
     "pass_event": pass_event_tool,
@@ -149,4 +154,9 @@ tool_registry = {
     "update_calendar_event": update_calendar_event_tool,
     "delete_calendar_event": delete_calendar_event_tool,
     "list_calendars": list_calendars_tool,
+
+    # Google Maps Tools
+    "search_places": search_places_tool,
+    "get_place_details": get_place_details_tool,
+    "compute_routes": compute_routes_tool,
 }
