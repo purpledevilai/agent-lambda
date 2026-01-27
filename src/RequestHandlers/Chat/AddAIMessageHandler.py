@@ -7,6 +7,7 @@ from Models import Agent, User, Context, Chat, Tool
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
+from LLM.TerminatingConfig import TerminatingConfig
 
 
 class AddAIMessageInput(BaseModel):
@@ -15,6 +16,7 @@ class AddAIMessageInput(BaseModel):
     prompt: Optional[str] = None
     save_ai_messages: Optional[bool] = True
     save_system_message: Optional[bool] = True
+    terminating_config: Optional[TerminatingConfig] = None
 
 
 def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agent.Agent:  
@@ -82,7 +84,8 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,
         context=context_dict,
-        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else []
+        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
+        terminating_config=body.terminating_config
     )
 
     # Invoke the agent (no human message added)

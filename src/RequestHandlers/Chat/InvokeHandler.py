@@ -7,11 +7,13 @@ from Models import Agent, User, Context, Chat, Tool
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
+from LLM.TerminatingConfig import TerminatingConfig
 
 
 class InvokeInput(BaseModel):
     context_id: str
     save_ai_messages: Optional[bool] = True
+    terminating_config: Optional[TerminatingConfig] = None
 
 
 def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Chat.ChatResponse:
@@ -57,7 +59,8 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,
         context=context_dict,
-        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else []
+        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
+        terminating_config=body.terminating_config
     )
 
     # Invoke the agent without adding a human message
