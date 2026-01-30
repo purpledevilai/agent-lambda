@@ -42,9 +42,14 @@ class AgentChat:
     if tools:
       tool_params_list = []
       self.name_to_tool = {}
+      self.name_to_tool_id = {}
       for tool in tools:
         tool_params_list.append(tool.params)
-        self.name_to_tool[tool.params.__name__] = tool
+        tool_name = tool.params.__name__
+        self.name_to_tool[tool_name] = tool
+        # Map tool name to tool_id (from the tool itself)
+        if tool.tool_id:
+          self.name_to_tool_id[tool_name] = tool.tool_id
       llm = llm.bind_tools(tool_params_list)
     self.prompt_chain = chat_prompt_template | llm
 
@@ -100,7 +105,9 @@ class AgentChat:
         if self.terminating_config:
           called_tool_calls.append(tool_call)
           
-          if tool_call["name"] in self.terminating_config.tool_ids:
+          # Look up the tool_id from the tool name
+          tool_id = self.name_to_tool_id.get(tool_call["name"])
+          if tool_id and tool_id in self.terminating_config.tool_ids:
             # Update AIMessage to only include called tools
             response.tool_calls = called_tool_calls
             # Return the terminating tool's response

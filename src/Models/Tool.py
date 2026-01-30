@@ -90,7 +90,15 @@ def get_tool(tool_id: str) -> Tool:
 
 def get_agent_tool_with_id(tool_id: str) -> AgentTool:
     if tool_id in ToolRegistry.tool_registry:
-        return ToolRegistry.tool_registry[tool_id]
+        # Return a copy of the registry tool with tool_id set
+        registry_tool = ToolRegistry.tool_registry[tool_id]
+        return AgentTool(
+            tool_id=tool_id,
+            function=registry_tool.function,
+            params=registry_tool.params,
+            pass_context=registry_tool.pass_context,
+            is_async=registry_tool.is_async
+        )
 
     tool: Tool = get_tool(tool_id)
 
@@ -116,7 +124,7 @@ def get_agent_tool_with_id(tool_id: str) -> AgentTool:
             invokation_type="RequestResponse"
         )
         return response["result"]
-    return AgentTool(params=params, function=custom_code_lambda_invoke, pass_context=tool.pass_context, is_async=tool.is_async)
+    return AgentTool(tool_id=tool_id, params=params, function=custom_code_lambda_invoke, pass_context=tool.pass_context, is_async=tool.is_async)
 
 
 def get_tool_for_user(tool_id: str, user: User.User) -> Tool:
