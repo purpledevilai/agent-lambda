@@ -7,7 +7,7 @@ from tests.config import access_token
 from src.lambda_function import lambda_handler
 # Imports for the test
 from src.AWS import Cognito
-from src.Models import Context, User, Agent
+from src.Models import Context, User, Agent, Tool, ParameterDefinition
 
 class TestChat(unittest.TestCase):
 
@@ -806,5 +806,242 @@ class TestChat(unittest.TestCase):
         # Clean up
         Context.delete_context(context.context_id)
         Agent.delete_agent(agent.agent_id)
+
+    def test_additional_agent_tools_with_add_ai_message(self):
+        """Test creating a tool, adding it via additional_agent_tools, and invoking via AddAIMessage"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        
+        # Create parameter definition for the tool
+        pd = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "message",
+                    "description": "The message to echo back",
+                    "type": "string",
+                    "parameters": []
+                }
+            ]
+        )
+        
+        # Create a simple tool that returns a specific message
+        tool_code = '''
+def test_echo_tool(message):
+    return f"Tool received: {message}"
+'''
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="test_echo_tool",
+            description="A test tool that echoes a message",
+            code=tool_code,
+            pd_id=pd.pd_id,
+            pass_context=False,
+            is_async=False
+        )
+        
+        # Create an agent without the tool (we'll add it via additional_agent_tools)
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-additional-tools",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are a helpful assistant. When asked to use a tool, call the test_echo_tool with the message provided.",
+            tools=[]
+        )
+        
+        # Create a context with the tool in additional_agent_tools
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id,
+            additional_agent_tools=[tool.tool_id]
+        )
+        
+        # Call AddAIMessage with a prompt to call the tool, using terminating_config
+        request = create_request(
+            method="POST",
+            path="/chat/add-ai-message",
+            body={
+                "context_id": context.context_id,
+                "prompt": "Call the test_echo_tool with the message 'Hello from test!'",
+                "terminating_config": {
+                    "tool_ids": [tool.tool_id],
+                    "consecutive_nudges": 2,
+                    "max_invocations": 10
+                }
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+        
+        result = lambda_handler(request, None)
+        
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        print("Response:", json.dumps(response, indent=2))
+        
+        # Verify the response contains the tool's output
+        self.assertIn("response", response)
+        self.assertIn("Tool received:", response["response"])
+        
+        # Verify the last message on the context is the ToolMessage (terminating_config stops after tool call)
+        updated_context = Context.get_context(context.context_id)
+        # Print all messages for debugging
+        for i, msg in enumerate(updated_context.messages):
+            print(f"Message {i}: type={msg.get('type')}, content={msg.get('content', '')[:100] if msg.get('content') else 'N/A'}...")
+        
+        last_message = updated_context.messages[-1]
+        self.assertEqual(last_message.get("type"), "tool")
+        self.assertIn("Tool received:", last_message.get("content", ""))
+        
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(tool.tool_id)
+        ParameterDefinition.delete_parameter_definition(pd.pd_id)
+
+    def test_terminating_config_with_nudge(self):
+        """Test terminating_config triggers nudge when agent returns content instead of calling terminating tool"""
+        
+        # Set up
+        cognito_user = Cognito.get_user_from_cognito(access_token)
+        user = User.get_user(cognito_user.sub)
+        
+        # Create parameter definition for the tool
+        pd = ParameterDefinition.create_parameter_definition(
+            org_id=user.organizations[0],
+            parameters=[
+                {
+                    "name": "result",
+                    "description": "The final result of the completed task",
+                    "type": "string",
+                    "parameters": []
+                }
+            ]
+        )
+        
+        # Create a terminating tool that returns a specific message
+        tool_code = '''
+def complete_task(result):
+    return f"Task completed with result: {result}"
+'''
+        tool = Tool.create_tool(
+            org_id=user.organizations[0],
+            name="complete_task",
+            description="Call this tool when you have completed your task and have a final result to return",
+            code=tool_code,
+            pd_id=pd.pd_id,
+            pass_context=False,
+            is_async=False
+        )
+        
+        # Create an agent with the tool
+        agent = Agent.create_agent(
+            org_id=user.organizations[0],
+            agent_name="test-agent-terminating",
+            is_public=False,
+            agent_speaks_first=False,
+            agent_description="test-agent-description",
+            prompt="You are an assistant. You have a complete_task tool. When asked to complete a task, call the complete_task tool with the result.",
+            tools=[tool.tool_id]
+        )
+        
+        # Create a normal context
+        context = Context.create_context(
+            agent_id=agent.agent_id,
+            user_id=user.user_id
+        )
+        
+        # Call chat endpoint with terminating_config, using a vague message that might cause 
+        # the agent to respond with content first (triggering nudge)
+        request = create_request(
+            method="POST",
+            path="/chat",
+            body={
+                "context_id": context.context_id,
+                "message": "Hi there!",
+                "terminating_config": {
+                    "tool_ids": [tool.tool_id],
+                    "consecutive_nudges": 2,
+                    "nudge_message": "You are currently in an autonomous execution mode with no user interaction. You must complete your task by calling the complete_task tool.",
+                    "max_invocations": 10
+                }
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+        
+        result = lambda_handler(request, None)
+        
+        # Check the response
+        self.assertEqual(result["statusCode"], 200)
+        response = json.loads(result["body"])
+        print("Terminating config response:", json.dumps(response, indent=2))
+        
+        # Verify the response is from the terminating tool
+        self.assertIn("response", response)
+        self.assertIn("Task completed with result:", response["response"])
+        
+        # Verify the context has the nudge system message (agent likely responded with content first)
+        updated_context = Context.get_context(context.context_id)
+        
+        # Look for the nudge message in the context
+        nudge_found = False
+        for msg in updated_context.messages:
+            if msg.get("type") == "system" and "autonomous execution mode" in msg.get("content", ""):
+                nudge_found = True
+                break
+        
+        print(f"Nudge message found: {nudge_found}")
+        print(f"Total messages in context: {len(updated_context.messages)}")
+        
+        # Print all messages for debugging
+        for i, msg in enumerate(updated_context.messages):
+            print(f"Message {i}: type={msg.get('type')}, content={msg.get('content', '')[:100] if msg.get('content') else 'N/A'}...")
+        
+        # Verify the last message is the tool response
+        last_message = updated_context.messages[-1]
+        self.assertEqual(last_message.get("type"), "tool")
+        self.assertIn("Task completed with result:", last_message.get("content", ""))
+        
+        # Test 3: Call invoke again WITHOUT terminating_config and verify we get a normal response
+        invoke_request = create_request(
+            method="POST",
+            path="/chat/invoke",
+            body={
+                "context_id": context.context_id,
+                "save_ai_messages": True
+            },
+            headers={
+                "Authorization": access_token
+            }
+        )
+        
+        invoke_result = lambda_handler(invoke_request, None)
+        
+        # Check the invoke response
+        self.assertEqual(invoke_result["statusCode"], 200)
+        invoke_response = json.loads(invoke_result["body"])
+        print("Invoke response (no terminating config):", json.dumps(invoke_response, indent=2))
+        
+        # Verify we got a normal content response (not a tool call response)
+        self.assertIn("response", invoke_response)
+        self.assertIsNotNone(invoke_response["response"])
+        self.assertGreater(len(invoke_response["response"]), 0)
+        
+        # The response should NOT be from the terminating tool since we didn't use terminating_config
+        # (agent should respond normally to continue the conversation)
+        
+        # Clean up
+        Context.delete_context(context.context_id)
+        Agent.delete_agent(agent.agent_id)
+        Tool.delete_tool(tool.tool_id)
+        ParameterDefinition.delete_parameter_definition(pd.pd_id)
         
         

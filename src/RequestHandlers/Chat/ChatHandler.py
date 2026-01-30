@@ -51,7 +51,8 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,
         context=context_dict,
-        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else []
+        prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
+        terminating_config=body.terminating_config
     )
 
     # Invoke the agent (human message already in context)
