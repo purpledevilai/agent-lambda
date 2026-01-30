@@ -868,7 +868,7 @@ def test_echo_tool(message):
                 "context_id": context.context_id,
                 "prompt": "Call the test_echo_tool with the message 'Hello from test!'",
                 "terminating_config": {
-                    "tool_ids": ["test_echo_tool"],
+                    "tool_ids": [tool.tool_id],
                     "consecutive_nudges": 2,
                     "max_invocations": 10
                 }
@@ -966,7 +966,7 @@ def complete_task(result):
                 "context_id": context.context_id,
                 "message": "Hi there!",
                 "terminating_config": {
-                    "tool_ids": ["complete_task"],
+                    "tool_ids": [tool.tool_id],
                     "consecutive_nudges": 2,
                     "nudge_message": "You are currently in an autonomous execution mode with no user interaction. You must complete your task by calling the complete_task tool.",
                     "max_invocations": 10
