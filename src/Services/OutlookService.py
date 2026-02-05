@@ -144,7 +144,9 @@ def list_messages(integration_id: str, folder_id: str = None, filter_query: str 
         params["$select"] = ",".join(select)
     
     # Default ordering by received date descending
-    params["$orderby"] = "receivedDateTime desc"
+    # Note: $orderby is not supported with $search in Microsoft Graph API
+    if not search_query:
+        params["$orderby"] = "receivedDateTime desc"
     
     return outlook_api_request(integration_id, "GET", path, params=params)
 
