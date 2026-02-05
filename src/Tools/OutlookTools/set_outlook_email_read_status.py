@@ -1,5 +1,6 @@
 import json
 from pydantic import Field, BaseModel
+from typing import Optional
 from LLM.AgentTool import AgentTool
 from Services import OutlookService
 
@@ -9,16 +10,22 @@ class set_outlook_email_read_status(BaseModel):
     Mark an email as read or unread using a single boolean parameter.
     """
     integration_id: str = Field(description="The Outlook integration ID to use for authentication.")
+    shared_mailbox_email: Optional[str] = Field(
+        default=None,
+        description="Email address of a shared mailbox to access. Leave empty to access your own mailbox."
+    )
     message_id: str = Field(description="The message ID to modify.")
     mark_as_read: bool = Field(description="`true` to mark as read, `false` to mark as unread.")
 
 
-def set_outlook_email_read_status_func(integration_id: str, message_id: str, mark_as_read: bool) -> str:
+def set_outlook_email_read_status_func(integration_id: str, shared_mailbox_email: str = None,
+                                        message_id: str = None, mark_as_read: bool = None) -> str:
     """
     Set the read status of an email.
     
     Args:
         integration_id: The Outlook integration ID
+        shared_mailbox_email: Email address of a shared mailbox to access (optional)
         message_id: The message ID
         mark_as_read: True to mark as read, False to mark as unread
         
@@ -30,7 +37,8 @@ def set_outlook_email_read_status_func(integration_id: str, message_id: str, mar
     if not message_id:
         raise Exception("message_id is required.")
     
-    result = OutlookService.update_message(integration_id, message_id, {"isRead": mark_as_read})
+    result = OutlookService.update_message(integration_id, message_id, {"isRead": mark_as_read},
+                                           shared_mailbox_email=shared_mailbox_email)
     
     action = "marked_as_read" if mark_as_read else "marked_as_unread"
     

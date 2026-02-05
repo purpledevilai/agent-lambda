@@ -12,6 +12,10 @@ class create_outlook_draft(BaseModel):
     update it later.
     """
     integration_id: str = Field(description="The Outlook integration ID to use for authentication.")
+    shared_mailbox_email: Optional[str] = Field(
+        default=None,
+        description="Email address of a shared mailbox to create the draft in. Leave empty to use your own mailbox."
+    )
     to: Optional[str] = Field(
         default=None,
         description="The recipient's email address."
@@ -30,13 +34,15 @@ class create_outlook_draft(BaseModel):
     )
 
 
-def create_outlook_draft_func(integration_id: str, to: str = None, subject: str = None, 
+def create_outlook_draft_func(integration_id: str, shared_mailbox_email: str = None,
+                               to: str = None, subject: str = None, 
                                body: str = None, html: bool = False) -> str:
     """
     Create a draft email.
     
     Args:
         integration_id: The Outlook integration ID
+        shared_mailbox_email: Email address of a shared mailbox to access (optional)
         to: Recipient email address (optional)
         subject: Email subject (optional)
         body: Email body (optional)
@@ -48,7 +54,8 @@ def create_outlook_draft_func(integration_id: str, to: str = None, subject: str 
     if not integration_id:
         raise Exception("integration_id is required.")
     
-    result = OutlookService.create_draft(integration_id, to, subject, body, html=html)
+    result = OutlookService.create_draft(integration_id, to, subject, body, html=html,
+                                          shared_mailbox_email=shared_mailbox_email)
     
     return json.dumps({
         "status": "created",
