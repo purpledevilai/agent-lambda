@@ -1,5 +1,6 @@
 import json
 from pydantic import Field, BaseModel
+from typing import Optional
 from LLM.AgentTool import AgentTool
 from Services import OutlookService
 
@@ -9,15 +10,21 @@ class get_outlook_draft(BaseModel):
     Get the full content of a specific draft from Outlook.
     """
     integration_id: str = Field(description="The Outlook integration ID to use for authentication.")
+    shared_mailbox_email: Optional[str] = Field(
+        default=None,
+        description="Email address of a shared mailbox to access. Leave empty to access your own mailbox."
+    )
     draft_id: str = Field(description="The draft ID from list_outlook_drafts.")
 
 
-def get_outlook_draft_func(integration_id: str, draft_id: str) -> str:
+def get_outlook_draft_func(integration_id: str, shared_mailbox_email: str = None,
+                            draft_id: str = None) -> str:
     """
     Get the full content of a specific draft.
     
     Args:
         integration_id: The Outlook integration ID
+        shared_mailbox_email: Email address of a shared mailbox to access (optional)
         draft_id: The draft ID
         
     Returns:
@@ -28,7 +35,8 @@ def get_outlook_draft_func(integration_id: str, draft_id: str) -> str:
     if not draft_id:
         raise Exception("draft_id is required.")
     
-    message = OutlookService.get_draft(integration_id, draft_id)
+    message = OutlookService.get_draft(integration_id, draft_id,
+                                        shared_mailbox_email=shared_mailbox_email)
     
     # Parse recipient info
     to_recipients = message.get("toRecipients", [])

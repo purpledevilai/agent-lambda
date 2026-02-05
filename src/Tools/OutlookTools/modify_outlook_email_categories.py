@@ -1,6 +1,6 @@
 import json
 from pydantic import Field, BaseModel
-from typing import List
+from typing import List, Optional
 from LLM.AgentTool import AgentTool
 from Services import OutlookService
 
@@ -23,18 +23,24 @@ class modify_outlook_email_categories(BaseModel):
     To remove all categories, pass an empty list.
     """
     integration_id: str = Field(description="The Outlook integration ID to use for authentication.")
+    shared_mailbox_email: Optional[str] = Field(
+        default=None,
+        description="Email address of a shared mailbox to access. Leave empty to access your own mailbox."
+    )
     message_id: str = Field(description="The message ID to modify.")
     categories: List[str] = Field(
         description="List of category names to set on the email. Pass an empty list [] to remove all categories."
     )
 
 
-def modify_outlook_email_categories_func(integration_id: str, message_id: str, categories: List[str]) -> str:
+def modify_outlook_email_categories_func(integration_id: str, shared_mailbox_email: str = None,
+                                          message_id: str = None, categories: List[str] = None) -> str:
     """
     Set categories on an email.
     
     Args:
         integration_id: The Outlook integration ID
+        shared_mailbox_email: Email address of a shared mailbox to access (optional)
         message_id: The message ID
         categories: List of category names to set
         
@@ -48,7 +54,8 @@ def modify_outlook_email_categories_func(integration_id: str, message_id: str, c
     if categories is None:
         raise Exception("categories is required (can be an empty list).")
     
-    result = OutlookService.update_message_categories(integration_id, message_id, categories)
+    result = OutlookService.update_message_categories(integration_id, message_id, categories,
+                                                       shared_mailbox_email=shared_mailbox_email)
     
     return json.dumps({
         "status": "success",

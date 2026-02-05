@@ -10,6 +10,10 @@ class update_outlook_draft(BaseModel):
     Update an existing draft email. Only the fields you provide will be updated.
     """
     integration_id: str = Field(description="The Outlook integration ID to use for authentication.")
+    shared_mailbox_email: Optional[str] = Field(
+        default=None,
+        description="Email address of a shared mailbox to access. Leave empty to access your own mailbox."
+    )
     draft_id: str = Field(description="The draft ID to update.")
     to: Optional[str] = Field(
         default=None,
@@ -29,13 +33,15 @@ class update_outlook_draft(BaseModel):
     )
 
 
-def update_outlook_draft_func(integration_id: str, draft_id: str, to: str = None, 
+def update_outlook_draft_func(integration_id: str, shared_mailbox_email: str = None,
+                               draft_id: str = None, to: str = None, 
                                subject: str = None, body: str = None, html: bool = False) -> str:
     """
     Update an existing draft.
     
     Args:
         integration_id: The Outlook integration ID
+        shared_mailbox_email: Email address of a shared mailbox to access (optional)
         draft_id: The draft ID to update
         to: Recipient email address (optional)
         subject: Email subject (optional)
@@ -50,7 +56,8 @@ def update_outlook_draft_func(integration_id: str, draft_id: str, to: str = None
     if not draft_id:
         raise Exception("draft_id is required.")
     
-    result = OutlookService.update_draft(integration_id, draft_id, to, subject, body, html=html)
+    result = OutlookService.update_draft(integration_id, draft_id, to, subject, body, html=html,
+                                          shared_mailbox_email=shared_mailbox_email)
     
     return json.dumps({
         "status": "updated",
