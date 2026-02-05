@@ -1,5 +1,6 @@
 import json
 from pydantic import Field, BaseModel
+from typing import Optional
 from LLM.AgentTool import AgentTool
 from Services import OutlookService
 
@@ -9,15 +10,21 @@ class delete_outlook_draft(BaseModel):
     Delete a draft email permanently without sending it.
     """
     integration_id: str = Field(description="The Outlook integration ID to use for authentication.")
+    shared_mailbox_email: Optional[str] = Field(
+        default=None,
+        description="Email address of a shared mailbox to access. Leave empty to access your own mailbox."
+    )
     draft_id: str = Field(description="The draft ID to delete.")
 
 
-def delete_outlook_draft_func(integration_id: str, draft_id: str) -> str:
+def delete_outlook_draft_func(integration_id: str, shared_mailbox_email: str = None,
+                               draft_id: str = None) -> str:
     """
     Delete a draft permanently.
     
     Args:
         integration_id: The Outlook integration ID
+        shared_mailbox_email: Email address of a shared mailbox to access (optional)
         draft_id: The draft ID to delete
         
     Returns:
@@ -28,7 +35,8 @@ def delete_outlook_draft_func(integration_id: str, draft_id: str) -> str:
     if not draft_id:
         raise Exception("draft_id is required.")
     
-    OutlookService.delete_draft(integration_id, draft_id)
+    OutlookService.delete_draft(integration_id, draft_id,
+                                 shared_mailbox_email=shared_mailbox_email)
     
     return json.dumps({
         "status": "deleted",

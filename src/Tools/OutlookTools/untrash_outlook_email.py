@@ -1,5 +1,6 @@
 import json
 from pydantic import Field, BaseModel
+from typing import Optional
 from LLM.AgentTool import AgentTool
 from Services import OutlookService
 
@@ -9,15 +10,21 @@ class untrash_outlook_email(BaseModel):
     Restore an email from the Deleted Items (trash) folder back to the Inbox.
     """
     integration_id: str = Field(description="The Outlook integration ID to use for authentication.")
+    shared_mailbox_email: Optional[str] = Field(
+        default=None,
+        description="Email address of a shared mailbox to access. Leave empty to access your own mailbox."
+    )
     message_id: str = Field(description="The message ID to restore from trash.")
 
 
-def untrash_outlook_email_func(integration_id: str, message_id: str) -> str:
+def untrash_outlook_email_func(integration_id: str, shared_mailbox_email: str = None,
+                                message_id: str = None) -> str:
     """
     Restore an email from the Deleted Items folder to Inbox.
     
     Args:
         integration_id: The Outlook integration ID
+        shared_mailbox_email: Email address of a shared mailbox to access (optional)
         message_id: The message ID to restore
         
     Returns:
@@ -28,7 +35,8 @@ def untrash_outlook_email_func(integration_id: str, message_id: str) -> str:
     if not message_id:
         raise Exception("message_id is required.")
     
-    result = OutlookService.move_message(integration_id, message_id, "inbox")
+    result = OutlookService.move_message(integration_id, message_id, "inbox",
+                                          shared_mailbox_email=shared_mailbox_email)
     
     return json.dumps({
         "status": "restored",
