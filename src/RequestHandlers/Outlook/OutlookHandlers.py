@@ -19,8 +19,8 @@ GRAPH_API_BASE = "https://graph.microsoft.com/v1.0"
 # Outlook/Graph API scopes for mail operations
 OUTLOOK_SCOPES = [
     "https://graph.microsoft.com/Mail.ReadWrite",
+    "https://graph.microsoft.com/Mail.ReadWrite.Shared",
     "https://graph.microsoft.com/Mail.Send",
-    "https://graph.microsoft.com/Mail.Read.Shared",
     "https://graph.microsoft.com/Mail.Send.Shared",
     "https://graph.microsoft.com/User.Read",
     "offline_access",
