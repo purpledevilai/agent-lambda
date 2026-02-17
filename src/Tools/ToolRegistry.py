@@ -56,6 +56,11 @@ from Tools.OutlookTools.create_outlook_folder import create_outlook_folder_tool
 from Tools.OutlookTools.delete_outlook_folder import delete_outlook_folder_tool
 from Tools.OutlookTools.move_outlook_email import move_outlook_email_tool
 from Tools.OutlookTools.modify_outlook_email_categories import modify_outlook_email_categories_tool
+# Outlook Reply Tools
+from Tools.OutlookTools.reply_outlook_email import reply_outlook_email_tool
+from Tools.OutlookTools.reply_all_outlook_email import reply_all_outlook_email_tool
+from Tools.OutlookTools.create_outlook_reply_draft import create_outlook_reply_draft_tool
+from Tools.OutlookTools.create_outlook_reply_all_draft import create_outlook_reply_all_draft_tool
 # Outlook Lifecycle Tools
 from Tools.OutlookTools.archive_outlook_email import archive_outlook_email_tool
 from Tools.OutlookTools.trash_outlook_email import trash_outlook_email_tool
@@ -141,6 +146,11 @@ tool_registry = {
     "delete_outlook_folder": delete_outlook_folder_tool,
     "move_outlook_email": move_outlook_email_tool,
     "modify_outlook_email_categories": modify_outlook_email_categories_tool,
+    # Outlook Reply Tools
+    "reply_outlook_email": reply_outlook_email_tool,
+    "reply_all_outlook_email": reply_all_outlook_email_tool,
+    "create_outlook_reply_draft": create_outlook_reply_draft_tool,
+    "create_outlook_reply_all_draft": create_outlook_reply_all_draft_tool,
     # Outlook Lifecycle Tools
     "archive_outlook_email": archive_outlook_email_tool,
     "trash_outlook_email": trash_outlook_email_tool,
