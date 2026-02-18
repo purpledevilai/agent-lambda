@@ -10,6 +10,7 @@ from AWS.Cognito import get_user_from_cognito, CognitoUser
 from AWS.APIGateway import create_api_gateway_response, APIGatewayResponse
 from AWS.CloudWatchLogs import get_logger
 from Models import APIKey
+from Models.Job import create_job, get_job as get_job_by_id, save_job as persist_job, JobStatus
 
 # User
 from RequestHandlers.User.CreateUserHandler import create_user_handler
@@ -131,6 +132,9 @@ from RequestHandlers.GoogleCalendar.GoogleCalendarHandlers import (
     google_calendar_auth_url_handler,
     google_calendar_auth_code_handler,
 )
+
+# InteliSort
+from RequestHandlers.InteliSort.RunInteliSortHandler import inteli_sort_handler
 
 
 
@@ -566,6 +570,14 @@ handler_registry = {
             "public": False
         }
     },
+    # InteliSort
+    "/inteli-sort": {
+        "POST": {
+            "handler": inteli_sort_handler,
+            "public": False,
+            "async_job": True
+        }
+    },
 }
 
 def match_route(request_path: str, method: str, handler_registry: dict) -> tuple:
@@ -585,11 +597,12 @@ def match_route(request_path: str, method: str, handler_registry: dict) -> tuple
                 # Extract named groups as parameters
                 params = match.groupdict()
                 handler = handler_info.get('handler')
-                is_public = handler_info.get('public', False)  # Default to False if 'public' key is missing
-                return_type = handler_info.get('return_type', 'application/json')  # Default to 'json' if 'return_type' key is missing
-                return handler, params, is_public, return_type
+                is_public = handler_info.get('public', False)
+                return_type = handler_info.get('return_type', 'application/json')
+                is_async_job = handler_info.get('async_job', False)
+                return handler, params, is_public, return_type, is_async_job
     
-    return None, None, None, None
+    return None, None, None, None, None
 
 
 # LAMBDA HANDLER - What gets called when a request is made. event has any data that's passed in the request
@@ -598,33 +611,7 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
 
     # Create a LambdaEvent object from the event
     lambda_event = LambdaEvent(**event)
-
-    # Check if we need to spawn an async callback invocation
-    # Only spawn if Callback-URL is present AND useCallbackUrl is not already set
-    callback_url = lambda_event.headers.get("Callback-URL")
-    if callback_url and not lambda_event.useCallbackUrl:
-        # Generate request_id or use the one provided in headers
-        request_id = lambda_event.headers.get("Callback-Request-ID") or str(uuid.uuid4())
-        
-        # Create async event with callback flags
-        async_event = {
-            **event,
-            "useCallbackUrl": True,
-            "requestId": request_id
-        }
-        
-        # Invoke this lambda asynchronously (fire-and-forget)
-        invoke_lambda(
-            lambda_name=os.environ["API_LAMBDA_NAME"],
-            event=async_event,
-            invokation_type="Event"
-        )
-        
-        # Return immediately with processing status
-        return create_api_gateway_response(202, {
-            "status": "processing",
-            "request_id": request_id
-        }, "application/json")
+    callback_url = lambda_event.headers.get("Callback-URL") if lambda_event.headers else None
 
     try:
         # Get the request details
@@ -632,7 +619,7 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
         request_method: str = lambda_event.httpMethod
 
         # Get the handler for the request
-        handler, request_params, is_public, return_type = match_route(request_path, request_method, handler_registry)
+        handler, request_params, is_public, return_type, is_async_job = match_route(request_path, request_method, handler_registry)
         if not handler:
             raise Exception("Invalid request path", 404)
         lambda_event.requestParameters = request_params
@@ -648,7 +635,7 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
             if APIKey.validate_api_key(token):
                 contents = APIKey.get_api_key_contents(token)
                 
-                # Block client tokens from accessing this API
+                # Block client tokens from accessing this API. Client tokens are used for WebSocket Chat, not API access.
                 if contents.get("type", "client") == "client":
                     raise Exception("Client tokens cannot access this API", 403)
                 
@@ -668,8 +655,33 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
             # No user, but request is to a public endpoint
             if not is_public:
                 raise Exception("Not authenticated", 401)
-            
-        # Call the handler
+
+        # ── Async dispatch: create job and/or callback, then re-invoke ──
+        if (is_async_job and not lambda_event.runJobId) or (callback_url and not lambda_event.useCallbackUrl):
+            async_event = {**event}
+            job = None
+
+            if is_async_job:
+                job = create_job(owner_id=user.sub, status=JobStatus.queued, message="Job queued", data={})
+                async_event["runJobId"] = job.job_id
+
+            if callback_url:
+                request_id = lambda_event.headers.get("Callback-Request-ID") or (job.job_id if job else str(uuid.uuid4()))
+                async_event["useCallbackUrl"] = True
+                async_event["requestId"] = request_id
+
+            invoke_lambda(
+                lambda_name=os.environ["API_LAMBDA_NAME"],
+                event=async_event,
+                invokation_type="Event"
+            )
+
+            if job:
+                return create_api_gateway_response(202, job.model_dump(), "application/json")
+            else:
+                return create_api_gateway_response(202, {"status": "processing", "request_id": request_id}, "application/json")
+
+        # ── Normal / async job execution flow ──
         response: BaseModel = handler(
             lambda_event=lambda_event,
             user=user
@@ -677,7 +689,7 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
 
         response_body = response.model_dump() if return_type == 'application/json' else response
 
-        # If this is an async callback invocation, POST to the callback URL instead of returning
+        # If this is an async callback invocation, POST to the callback URL
         if lambda_event.useCallbackUrl and callback_url:
             callback_headers = {}
             callback_token = lambda_event.headers.get("Callback-Token")
@@ -698,12 +710,21 @@ def lambda_handler(event: dict, context) -> APIGatewayResponse:
 
         # Return the response 
         return create_api_gateway_response(200, response_body, return_type)
-            
 
     # Return any errors   
     except Exception as e:
         logger.error(str(e))
         error, code = e.args if len(e.args) == 2 else (e, 500)
+
+        # If this was an async job invocation, update the job to error status
+        if lambda_event.runJobId:
+            try:
+                job = get_job_by_id(lambda_event.runJobId)
+                job.status = JobStatus.error
+                job.message = str(error)
+                persist_job(job)
+            except Exception:
+                logger.error(f"Failed to update job {lambda_event.runJobId} to error status")
         
         # If this is an async callback invocation, POST error to the callback URL
         if lambda_event.useCallbackUrl and callback_url:
