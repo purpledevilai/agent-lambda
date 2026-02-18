@@ -23,6 +23,8 @@ class LambdaEvent(BaseModel):
     # Async callback fields
     useCallbackUrl: Optional[bool] = False
     requestId: Optional[str] = None
+    # Async job fields
+    runJobId: Optional[str] = None
 
 def invoke_lambda(lambda_name: str, event: dict, invokation_type: str = "Event"):
     client = boto3.client('lambda')
