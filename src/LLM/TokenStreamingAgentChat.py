@@ -24,6 +24,7 @@ class TokenStreamingAgentChat:
         context: dict = {},
         on_tool_call: Optional[Callable[[str, str, dict], Awaitable[None]]] = None,
         on_tool_response: Optional[Callable[[str, str, str], Awaitable[None]]] = None,
+        on_response: Optional[Callable] = None,
         prompt_arg_names: List[str] = [],
     ):
         # Instance variables
@@ -31,6 +32,7 @@ class TokenStreamingAgentChat:
         self.context = context
         self.on_tool_call = on_tool_call
         self.on_tool_response = on_tool_response
+        self.on_response = on_response
 
         # Replace prompt arguments using explicit prompt_arg_names
         # Simple string find-and-replace - arg names can be any format (e.g., ARG_USER_NAME or {user_name})
@@ -73,6 +75,7 @@ class TokenStreamingAgentChat:
         # placeholder vars for tool calls if any
         tool_calls = {}
         currently_collecting_tool_id = ""
+        accumulated_response = None
 
         # Start the async stream!
         response_generator = self.prompt_chain.astream({"messages": self.messages})
@@ -82,11 +85,16 @@ class TokenStreamingAgentChat:
         async for chunk in response_generator:
             print(f"Received chunk")
 
+            accumulated_response = chunk if accumulated_response is None else accumulated_response + chunk
+
             # 1.) Content -  means its a response for the human!
             if chunk.content:
 
+                on_response_cb = self.on_response
+
                 # Create an async generator for the response
                 async def async_response_generator():
+                    nonlocal accumulated_response
                     # Initialize ai message
                     ai_message = ''
 
@@ -96,11 +104,15 @@ class TokenStreamingAgentChat:
 
                     # Then for each other chunk, add and send
                     async for res_chunk in response_generator:
+                        accumulated_response = accumulated_response + res_chunk
                         ai_message += res_chunk.content
                         yield res_chunk.content
 
                     # Add message after streaming is complete
                     self.messages.append(AIMessage(content=ai_message))
+
+                    if on_response_cb:
+                        on_response_cb(accumulated_response)
 
                 # Return the async generator
                 return async_response_generator()
@@ -124,6 +136,9 @@ class TokenStreamingAgentChat:
                     tool_calls[currently_collecting_tool_id]['args'] += tool_chunk['args']
 
         # 3.) Tool Section - We didn't return the content stream in section 1. This means we have tools to call
+
+        if self.on_response and accumulated_response:
+            self.on_response(accumulated_response)
 
         # 3.a) Add tool call message to messages
         self.messages.append(AIMessage(
