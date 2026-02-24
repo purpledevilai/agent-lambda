@@ -136,6 +136,9 @@ from RequestHandlers.GoogleCalendar.GoogleCalendarHandlers import (
 # InteliSort
 from RequestHandlers.InteliSort.RunInteliSortHandler import inteli_sort_handler
 
+# Usage
+from RequestHandlers.Usage.GetUsageHandler import get_usage_handler
+
 
 
 
@@ -576,6 +579,13 @@ handler_registry = {
             "handler": inteli_sort_handler,
             "public": False,
             "async_job": True
+        }
+    },
+    # Usage
+    "/usage": {
+        "GET": {
+            "handler": get_usage_handler,
+            "public": False
         }
     },
 }

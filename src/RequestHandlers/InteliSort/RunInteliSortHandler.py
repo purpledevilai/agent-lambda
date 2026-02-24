@@ -7,6 +7,8 @@ from LLM.InteliSort import inteli_sort
 from LLM.LLMExtract import llm_extract
 from LLM.CreateLLM import create_llm
 from Models.Job import get_job, save_job, JobStatus
+from Models.TokenTracking import build_tracking_callback
+from Models.User import get_user
 
 
 class InteliSortItem(BaseModel):
@@ -53,9 +55,15 @@ def inteli_sort_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
     # Build comparison function backed by LLM
     llm = create_llm()
 
+    tracking_callback = None
+    if user:
+        db_user = get_user(user.sub)
+        if db_user.organizations:
+            tracking_callback = build_tracking_callback(db_user.organizations[0])
+
     def compare(a, b):
         prompt = body.prompt.replace("ARG_ITEM_A", str(a["value"])).replace("ARG_ITEM_B", str(b["value"]))
-        result = llm_extract(ComparisonResult, prompt, llm)
+        result = llm_extract(ComparisonResult, prompt, llm, on_response=tracking_callback)
         return a if result["victor"] == "a" else b
 
     # Build log function that persists progress to the Job
