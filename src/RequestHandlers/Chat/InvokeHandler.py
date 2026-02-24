@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Agent, User, Context, Chat, Tool
+from Models.TokenTracking import build_tracking_callback
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
@@ -60,7 +61,8 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
         tools=tools,
         context=context_dict,
         prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
-        terminating_config=body.terminating_config
+        terminating_config=body.terminating_config,
+        on_response=build_tracking_callback(agent.org_id),
     )
 
     # Invoke the agent without adding a human message

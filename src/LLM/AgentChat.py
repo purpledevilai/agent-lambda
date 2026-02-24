@@ -1,5 +1,5 @@
 import json
-from typing import List, Optional
+from typing import List, Optional, Callable
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, SystemMessage
@@ -19,10 +19,12 @@ class AgentChat:
       context: dict = None,
       prompt_arg_names: List[str] = [],
       terminating_config: Optional[TerminatingConfig] = None,
+      on_response: Optional[Callable] = None,
   ):
     self.messages = messages
     self.context = context
     self.terminating_config = terminating_config
+    self.on_response = on_response
     self._invocation_count = 0
     self._consecutive_nudge_count = 0
     
@@ -66,6 +68,9 @@ class AgentChat:
     
     response = self.prompt_chain.invoke({"messages": self.messages})
     self.messages.append(response)
+
+    if self.on_response:
+      self.on_response(response)
     
     if len(response.tool_calls) > 0:
       # Reset consecutive nudge count since agent is calling tools
