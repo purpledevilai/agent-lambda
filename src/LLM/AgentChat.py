@@ -5,6 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, SystemMessage
 from LLM.AgentTool import AgentTool
 from LLM.TerminatingConfig import TerminatingConfig
+from LLM.ContentNormalizer import normalize_content
 from Models import DataWindow, JSONDocument
 from Tools.MemoryTools.helper_retrive_and_cache_doc import retrieve_and_cache_doc
 from AWS.APIGateway import default_type_error_handler
@@ -134,7 +135,7 @@ class AgentChat:
       self.messages.append(nudge_message)
       return self.invoke(load_data_windows=True)
     
-    return response.content
+    return normalize_content(response.content)
   
   def _refresh_data_windows(self):
     """

@@ -47,7 +47,7 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
 
     # Create the agent chat with the updated context (including human message)
     agent_chat = AgentChat(
-        create_llm(),
+        create_llm(context.model_id),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,

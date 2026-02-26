@@ -55,7 +55,7 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
 
     # Create the agent chat
     agent_chat = AgentChat(
-        create_llm(),
+        create_llm(context.model_id),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,

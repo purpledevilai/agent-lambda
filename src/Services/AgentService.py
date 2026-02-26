@@ -7,7 +7,7 @@ from Models.TokenTracking import build_tracking_callback
 
 def invoke_context(context: Context.Context, agent: Agent.Agent) -> Context.Context:
     agentChat: AgentChat = AgentChat(
-        create_llm(),
+        create_llm(context.model_id if hasattr(context, 'model_id') else None),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=[Tool.get_agent_tool_with_id(tool) for tool in agent.tools] if agent.tools else [],

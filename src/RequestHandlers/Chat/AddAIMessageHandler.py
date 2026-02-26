@@ -5,6 +5,7 @@ from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Agent, User, Context, Chat, Tool
 from Models.TokenTracking import build_tracking_callback
+from Models.LLMModel import is_anthropic_model
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
@@ -54,7 +55,10 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
     # Otherwise, if prompt is provided, append it to the agent's prompt
     if not body.prompt:
         raise ValueError("Either 'message' or 'prompt' must be provided in the request body.")
-    
+
+    if context.model_id and is_anthropic_model(context.model_id):
+        raise Exception("Anthropic models do not support adding system messages mid-conversation", 400)
+
     # Track the message count before adding the system message
     messages_before_system = len(context.messages)
     
@@ -80,7 +84,7 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
 
     # Create the agent chat
     agent_chat = AgentChat(
-        llm=create_llm(),
+        llm=create_llm(context.model_id),
         prompt=agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,

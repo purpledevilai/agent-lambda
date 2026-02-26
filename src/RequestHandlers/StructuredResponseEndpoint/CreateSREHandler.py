@@ -3,6 +3,7 @@ from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import StructuredResponseEndpoint as SRE
 from Models import User, ParameterDefinition
+from Models.LLMModel import validate_model_id
 
 
 def create_sre_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SRE.StructuredResponseEndpoint:
@@ -20,6 +21,9 @@ def create_sre_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SRE.Stru
     # Validate that the user has access to the parameter definition
     ParameterDefinition.get_parameter_definition_for_user(body.pd_id, dbUser)
 
+    if body.model_id:
+        validate_model_id(body.model_id)
+
     # Create the SRE
     sre = SRE.create_sre(
         org_id=body.org_id,
@@ -28,6 +32,7 @@ def create_sre_handler(lambda_event: LambdaEvent, user: CognitoUser) -> SRE.Stru
         pd_id=body.pd_id,
         is_public=body.is_public,
         prompt_template=body.prompt_template,
+        model_id=body.model_id,
     )
 
     return sre

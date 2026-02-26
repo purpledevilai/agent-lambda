@@ -8,6 +8,7 @@ from LLM.LLMExtract import llm_extract
 from LLM.CreateLLM import create_llm
 from Models.Job import get_job, save_job, JobStatus
 from Models.TokenTracking import build_tracking_callback
+from Models.LLMModel import validate_model_id
 from Models.User import get_user
 
 
@@ -19,6 +20,7 @@ class InteliSortInput(BaseModel):
     items: list[Union[str, InteliSortItem]]
     prompt: str
     n: int
+    model_id: Optional[str] = None
 
 class ComparisonResult(BaseModel):
     """The victor of a comparison between two items."""
@@ -52,8 +54,11 @@ def inteli_sort_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
         else:
             items.append({"id": item.id, "value": item.value})
 
+    if body.model_id:
+        validate_model_id(body.model_id)
+
     # Build comparison function backed by LLM
-    llm = create_llm()
+    llm = create_llm(body.model_id)
 
     tracking_callback = None
     if user:
