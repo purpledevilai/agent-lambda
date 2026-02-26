@@ -111,7 +111,7 @@ class TokenStreamingAgentChat:
                     if accumulated_response.tool_calls:
                         if on_response_cb:
                             on_response_cb(accumulated_response)
-                        self.messages.append(accumulated_response)
+                        self.messages.append(self._chunk_to_ai_message(accumulated_response))
                         await self._process_tool_calls(accumulated_response.tool_calls)
                         recursive_gen = await self.invoke(load_data_windows=True)
                         if recursive_gen:
@@ -135,7 +135,7 @@ class TokenStreamingAgentChat:
         if self.on_response:
             self.on_response(accumulated_response)
 
-        self.messages.append(accumulated_response)
+        self.messages.append(self._chunk_to_ai_message(accumulated_response))
         await self._process_tool_calls(accumulated_response.tool_calls)
         return await self.invoke(load_data_windows=True)
 
@@ -185,6 +185,25 @@ class TokenStreamingAgentChat:
                 )
 
             self.messages.append(tool_message)
+
+    @staticmethod
+    def _chunk_to_ai_message(chunk) -> AIMessage:
+        """Convert an accumulated AIMessageChunk to an AIMessage.
+
+        AIMessageChunk serializes with type "AIMessageChunk" which the
+        dict_to_base_messages converter doesn't recognise when the context
+        is reloaded from the database. Converting to AIMessage ensures
+        it persists with type "ai".
+        """
+        return AIMessage(
+            content=chunk.content,
+            additional_kwargs=chunk.additional_kwargs,
+            response_metadata=chunk.response_metadata,
+            tool_calls=chunk.tool_calls,
+            invalid_tool_calls=chunk.invalid_tool_calls,
+            usage_metadata=chunk.usage_metadata,
+            id=chunk.id,
+        )
 
     ######################################
     #                                    #
