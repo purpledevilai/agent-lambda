@@ -136,6 +136,9 @@ from RequestHandlers.InteliSort.RunInteliSortHandler import inteli_sort_handler
 # Usage
 from RequestHandlers.Usage.GetUsageHandler import get_usage_handler
 
+# Models
+from RequestHandlers.Model.GetModelsHandler import get_models_handler
+
 
 
 
@@ -576,6 +579,13 @@ handler_registry = {
     "/usage": {
         "GET": {
             "handler": get_usage_handler,
+            "public": False
+        }
+    },
+    # Models
+    "/models": {
+        "GET": {
+            "handler": get_models_handler,
             "public": False
         }
     },
