@@ -26,6 +26,7 @@ class Context(BaseModel):
     user_defined: Optional[dict] = None
     additional_agent_tools: Optional[list[str]] = []
     async_tool_response_queue: Optional[list[dict]] = []
+    model_id: Optional[str] = None
 
 class InitializeTool(BaseModel):
     tool_id: str
@@ -97,11 +98,12 @@ def create_context(
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
 
-    context = Context(**contextData)
-
     agent = Agent.get_agent(agent_id)
     if not agent:
         raise Exception(f"Agent with id: {agent_id} does not exist", 404)
+
+    contextData["model_id"] = agent.model_id
+    context = Context(**contextData)
     
     # Validate additional_agent_tools if provided
     if additional_agent_tools:
