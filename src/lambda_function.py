@@ -56,9 +56,6 @@ from RequestHandlers.ScrapePage.ScrapePageHandler import scrape_page_handler
 # Job
 from RequestHandlers.Job.GetJobHandler import get_job_handler
 
-# Create Team
-from RequestHandlers.CreateTeam.CreateTeamHandler import create_team_handler
-
 # Parameter Definition
 from RequestHandlers.ParameterDefinition.CreateParameterDefinitionHandler import create_parameter_definition_handler
 from RequestHandlers.ParameterDefinition.GetParameterDefinitionHandler import get_parameter_definition_handler
@@ -280,12 +277,6 @@ handler_registry = {
     "/job/{job_id}": {
         "GET": {
             "handler": get_job_handler,
-            "public": False
-        }
-    },
-    "/create-team": {
-        "POST": {
-            "handler": create_team_handler,
             "public": False
         }
     },
