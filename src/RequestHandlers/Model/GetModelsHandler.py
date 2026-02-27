@@ -1,6 +1,8 @@
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models.LLMModel import get_all_models, LLMModel
+from pydantic import BaseModel
+
 
 
 class GetModelsResponse(BaseModel):
