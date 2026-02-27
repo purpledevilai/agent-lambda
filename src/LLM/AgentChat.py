@@ -68,10 +68,19 @@ class AgentChat:
       self._refresh_data_windows()
     
     response = self.prompt_chain.invoke({"messages": self.messages})
-    self.messages.append(response)
 
     if self.on_response:
       self.on_response(response)
+
+    text_content = normalize_content(response.content)
+
+    if response.tool_calls and text_content:
+      # Mixed response (e.g. Anthropic sends text + tool calls together).
+      # Split into a text message and a tool-call-only message.
+      self.messages.append(AIMessage(content=text_content, response_metadata=response.response_metadata, id=response.id))
+      self.messages.append(AIMessage(content='', tool_calls=response.tool_calls, usage_metadata=response.usage_metadata, response_metadata=response.response_metadata))
+    else:
+      self.messages.append(response)
     
     if len(response.tool_calls) > 0:
       # Reset consecutive nudge count since agent is calling tools

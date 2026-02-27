@@ -64,7 +64,7 @@ def inteli_sort_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
     if user:
         db_user = get_user(user.sub)
         if db_user.organizations:
-            tracking_callback = build_tracking_callback(db_user.organizations[0])
+            tracking_callback = build_tracking_callback(db_user.organizations[0], body.model_id)
 
     def compare(a, b):
         prompt = body.prompt.replace("ARG_ITEM_A", str(a["value"])).replace("ARG_ITEM_B", str(b["value"]))

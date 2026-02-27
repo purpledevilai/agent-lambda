@@ -54,7 +54,7 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         context=context_dict,
         prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
         terminating_config=body.terminating_config,
-        on_response=build_tracking_callback(agent.org_id),
+        on_response=build_tracking_callback(agent.org_id, context.model_id),
     )
 
     # Invoke the agent (human message already in context)

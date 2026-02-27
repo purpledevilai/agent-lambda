@@ -13,6 +13,7 @@ class LLMModel(BaseModel):
     output_token_cost: float
     context_window_size: int
     order: Optional[int] = None
+    use_responses_api: Optional[bool] = False
 
 def get_model(model_name: str) -> LLMModel:
     item = get_item(MODELS_TABLE_NAME, MODELS_PRIMARY_KEY, model_name)
