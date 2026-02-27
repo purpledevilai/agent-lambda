@@ -3,5 +3,8 @@ from AWS.Cognito import CognitoUser
 from Models.LLMModel import get_all_models, LLMModel
 
 
+class GetModelsResponse(BaseModel):
+    models: list[LLMModel]
+
 def get_models_handler(lambda_event: LambdaEvent, user: CognitoUser) -> list[LLMModel]:
-    return get_all_models()
+    return GetModelsResponse(models=get_all_models())
