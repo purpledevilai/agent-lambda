@@ -29,7 +29,7 @@ def get_model_or_none(model_name: str) -> LLMModel | None:
 def get_all_models() -> list[LLMModel]:
     items = get_all_items(MODELS_TABLE_NAME)
     models = [LLMModel(**item) for item in items]
-    return sorted(models, key=lambda m: (m.order is None, m.order or 0))
+    return sorted(models, key=lambda m: (m.order is None, -(m.order or 0)))
 
 def validate_model_id(model_id: str) -> None:
     """Validate that a model_id exists in the models table. Raises 400 if not found."""
