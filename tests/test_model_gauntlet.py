@@ -92,6 +92,7 @@ def has_tool_message_containing(messages, text):
     return False
 
 
+@unittest.skipUnless(os.environ.get("RUN_GAUNTLET"), "Set RUN_GAUNTLET=1 to run model gauntlet tests")
 class TestModelGauntlet(unittest.TestCase):
 
     @classmethod

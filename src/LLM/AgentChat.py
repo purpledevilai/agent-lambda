@@ -80,7 +80,13 @@ class AgentChat:
       self.messages.append(AIMessage(content=text_content, response_metadata=response.response_metadata, id=response.id))
       self.messages.append(AIMessage(content='', tool_calls=response.tool_calls, usage_metadata=response.usage_metadata, response_metadata=response.response_metadata))
     else:
-      self.messages.append(response)
+      self.messages.append(AIMessage(
+        content=text_content or '',
+        tool_calls=response.tool_calls,
+        usage_metadata=response.usage_metadata,
+        response_metadata=response.response_metadata,
+        id=response.id,
+      ))
     
     if len(response.tool_calls) > 0:
       # Reset consecutive nudge count since agent is calling tools
