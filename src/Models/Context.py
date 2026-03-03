@@ -10,6 +10,7 @@ from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, Human
 from LLM.BaseMessagesConverter import base_messages_to_dict_messages
 from Tools.ToolRegistry import tool_registry
 from Models.LLMModel import get_model_or_none
+from LLM.CreateLLM import DEFAULT_MODEL
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -245,13 +246,13 @@ def delete_all_contexts_for_user(user_id: str) -> None:
 def transform_to_filtered_context(context: Context, show_tool_calls: bool = False) -> FilteredContext:
     messages = transform_messages_to_filtered(context.messages, show_tool_calls)
 
+    effective_model_id = context.model_id or DEFAULT_MODEL
     context_percentage = None
-    if context.model_id:
-        llm_model = get_model_or_none(context.model_id)
-        if llm_model and llm_model.context_window_size:
-            total_tokens = _get_last_total_tokens(context.messages)
-            if total_tokens:
-                context_percentage = round((total_tokens / llm_model.context_window_size) * 100, 2)
+    llm_model = get_model_or_none(effective_model_id)
+    if llm_model and llm_model.context_window_size:
+        total_tokens = _get_last_total_tokens(context.messages)
+        if total_tokens:
+            context_percentage = round((total_tokens / llm_model.context_window_size) * 100, 2)
 
     filtered_context = FilteredContext(**{
         "context_id": context.context_id,
@@ -259,7 +260,7 @@ def transform_to_filtered_context(context: Context, show_tool_calls: bool = Fals
         "user_id": context.user_id,
         "messages": messages,
         "user_defined": context.user_defined if context.user_defined else {},
-        "model_id": context.model_id,
+        "model_id": effective_model_id,
         "context_percentage": context_percentage,
         "created_at": context.created_at,
         "updated_at": context.updated_at

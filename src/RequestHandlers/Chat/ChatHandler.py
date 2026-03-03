@@ -6,7 +6,7 @@ from Models import Agent, User, Context, Chat, Tool
 from Models.TokenTracking import build_tracking_callback
 from Models.LLMModel import get_model_or_none
 from LLM.AgentChat import AgentChat
-from LLM.CreateLLM import create_llm
+from LLM.CreateLLM import create_llm, DEFAULT_MODEL
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
 
 
@@ -82,19 +82,19 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         Context.save_context(context)
 
     # Calculate context percentage
+    effective_model_id = context.model_id or DEFAULT_MODEL
     context_percentage = None
-    if context.model_id:
-        llm_model = get_model_or_none(context.model_id)
-        if llm_model and llm_model.context_window_size:
-            context_size = agent_chat.get_context_size()
-            context_percentage = round((context_size / llm_model.context_window_size) * 100, 2)
+    llm_model = get_model_or_none(effective_model_id)
+    if llm_model and llm_model.context_window_size:
+        context_size = agent_chat.get_context_size()
+        context_percentage = round((context_size / llm_model.context_window_size) * 100, 2)
 
     # Initialize the response
     response = Chat.ChatResponse(
         response=agent_response,
         saved_ai_messages=body.save_ai_messages,
         generated_messages=generated_messages_dicts,
-        model_id=context.model_id,
+        model_id=effective_model_id,
         context_percentage=context_percentage,
     )
 
