@@ -9,6 +9,7 @@ from Models import Agent, Tool
 from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, HumanMessage
 from LLM.BaseMessagesConverter import base_messages_to_dict_messages
 from Tools.ToolRegistry import tool_registry
+from Models.LLMModel import get_model_or_none
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -63,6 +64,8 @@ class FilteredContext(BaseModel):
     user_id: str
     messages: List[MessageType]
     user_defined: Optional[dict] = None
+    model_id: Optional[str] = None
+    context_percentage: Optional[float] = None
     created_at: int
     updated_at: int
 
@@ -241,17 +244,39 @@ def delete_all_contexts_for_user(user_id: str) -> None:
 
 def transform_to_filtered_context(context: Context, show_tool_calls: bool = False) -> FilteredContext:
     messages = transform_messages_to_filtered(context.messages, show_tool_calls)
-                
+
+    context_percentage = None
+    if context.model_id:
+        llm_model = get_model_or_none(context.model_id)
+        if llm_model and llm_model.context_window_size:
+            total_tokens = _get_last_total_tokens(context.messages)
+            if total_tokens:
+                context_percentage = round((total_tokens / llm_model.context_window_size) * 100, 2)
+
     filtered_context = FilteredContext(**{
         "context_id": context.context_id,
         "agent_id": context.agent_id,
         "user_id": context.user_id,
         "messages": messages,
         "user_defined": context.user_defined if context.user_defined else {},
+        "model_id": context.model_id,
+        "context_percentage": context_percentage,
         "created_at": context.created_at,
         "updated_at": context.updated_at
     })
     return filtered_context
+
+
+def _get_last_total_tokens(messages: list[dict]) -> int:
+    """Walk messages in reverse to find the last AI message with usage_metadata.total_tokens."""
+    for msg in reversed(messages):
+        if msg.get("type") == "ai":
+            usage = msg.get("usage_metadata")
+            if usage and isinstance(usage, dict):
+                total = usage.get("total_tokens", 0)
+                if total:
+                    return total
+    return 0
 
 def transform_to_history_context(context: Context, agent: Agent.Agent) -> HistoryContext:
     return HistoryContext(**{

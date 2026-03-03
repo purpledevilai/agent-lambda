@@ -217,6 +217,17 @@ class AgentChat:
       except Exception as e:
         self.messages[msg_index].content = f"Error refreshing MemoryWindow: {e}"
 
+  def get_context_size(self) -> int:
+    """Returns the total token count from the last AIMessage that has usage_metadata."""
+    for message in reversed(self.messages):
+      if isinstance(message, AIMessage):
+        usage = getattr(message, 'usage_metadata', None)
+        if usage:
+          total = usage.get('total_tokens', 0) if isinstance(usage, dict) else getattr(usage, 'total_tokens', 0)
+          if total:
+            return total
+    return 0
+
   def add_human_message_and_invoke(self, message: str):
     self.messages.append(HumanMessage(content=message))
     return self.invoke()
