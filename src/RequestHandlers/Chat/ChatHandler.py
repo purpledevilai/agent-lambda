@@ -4,8 +4,9 @@ from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Agent, User, Context, Chat, Tool
 from Models.TokenTracking import build_tracking_callback
+from Models.LLMModel import get_model_or_none
 from LLM.AgentChat import AgentChat
-from LLM.CreateLLM import create_llm
+from LLM.CreateLLM import create_llm, DEFAULT_MODEL
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
 
 
@@ -47,14 +48,14 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
 
     # Create the agent chat with the updated context (including human message)
     agent_chat = AgentChat(
-        create_llm(),
+        create_llm(context.model_id),
         agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,
         context=context_dict,
         prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
         terminating_config=body.terminating_config,
-        on_response=build_tracking_callback(agent.org_id),
+        on_response=build_tracking_callback(agent.org_id, context.model_id),
     )
 
     # Invoke the agent (human message already in context)
@@ -80,11 +81,21 @@ def chat_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Agen
         context.messages = all_dict_messages
         Context.save_context(context)
 
+    # Calculate context percentage
+    effective_model_id = context.model_id or DEFAULT_MODEL
+    context_percentage = None
+    llm_model = get_model_or_none(effective_model_id)
+    if llm_model and llm_model.context_window_size:
+        context_size = agent_chat.get_context_size()
+        context_percentage = round((context_size / llm_model.context_window_size) * 100, 2)
+
     # Initialize the response
     response = Chat.ChatResponse(
         response=agent_response,
         saved_ai_messages=body.save_ai_messages,
-        generated_messages=generated_messages_dicts
+        generated_messages=generated_messages_dicts,
+        model_id=effective_model_id,
+        context_percentage=context_percentage,
     )
 
     # check if there are chat events

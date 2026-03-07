@@ -31,4 +31,6 @@ class ChatResponse(BaseModel):
     response: str
     saved_ai_messages: bool
     generated_messages: List[MessageType]
+    model_id: Optional[str] = None
+    context_percentage: Optional[float] = None
     events: Optional[list[dict]] = None

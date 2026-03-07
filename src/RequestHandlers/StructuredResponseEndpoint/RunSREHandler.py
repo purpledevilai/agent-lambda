@@ -48,7 +48,7 @@ def run_sre_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]):
     extract_object = ParameterDefinition.create_pydantic_class(sre.name, pd.parameters, docstring=sre.description)
 
     # Run the LLM
-    llm_response = llm_extract(extract_object, prompt, create_llm(), on_response=build_tracking_callback(sre.org_id))
+    llm_response = llm_extract(extract_object, prompt, create_llm(sre.model_id), on_response=build_tracking_callback(sre.org_id, sre.model_id))
 
     return extract_object(**llm_response)
 

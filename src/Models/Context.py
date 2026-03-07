@@ -9,6 +9,8 @@ from Models import Agent, Tool
 from langchain_core.messages import AIMessage, ToolMessage, SystemMessage, HumanMessage
 from LLM.BaseMessagesConverter import base_messages_to_dict_messages
 from Tools.ToolRegistry import tool_registry
+from Models.LLMModel import get_model_or_none
+from LLM.CreateLLM import DEFAULT_MODEL
 
 logger = get_logger(log_level=os.environ["LOG_LEVEL"])
 
@@ -26,6 +28,7 @@ class Context(BaseModel):
     user_defined: Optional[dict] = None
     additional_agent_tools: Optional[list[str]] = []
     async_tool_response_queue: Optional[list[dict]] = []
+    model_id: Optional[str] = None
 
 class InitializeTool(BaseModel):
     tool_id: str
@@ -62,6 +65,8 @@ class FilteredContext(BaseModel):
     user_id: str
     messages: List[MessageType]
     user_defined: Optional[dict] = None
+    model_id: Optional[str] = None
+    context_percentage: Optional[float] = None
     created_at: int
     updated_at: int
 
@@ -97,11 +102,12 @@ def create_context(
         "updated_at": int(datetime.timestamp(datetime.now())),
     }
 
-    context = Context(**contextData)
-
     agent = Agent.get_agent(agent_id)
     if not agent:
         raise Exception(f"Agent with id: {agent_id} does not exist", 404)
+
+    contextData["model_id"] = agent.model_id
+    context = Context(**contextData)
     
     # Validate additional_agent_tools if provided
     if additional_agent_tools:
@@ -239,17 +245,39 @@ def delete_all_contexts_for_user(user_id: str) -> None:
 
 def transform_to_filtered_context(context: Context, show_tool_calls: bool = False) -> FilteredContext:
     messages = transform_messages_to_filtered(context.messages, show_tool_calls)
-                
+
+    effective_model_id = context.model_id or DEFAULT_MODEL
+    context_percentage = None
+    llm_model = get_model_or_none(effective_model_id)
+    if llm_model and llm_model.context_window_size:
+        total_tokens = _get_last_total_tokens(context.messages)
+        if total_tokens:
+            context_percentage = round((total_tokens / llm_model.context_window_size) * 100, 2)
+
     filtered_context = FilteredContext(**{
         "context_id": context.context_id,
         "agent_id": context.agent_id,
         "user_id": context.user_id,
         "messages": messages,
         "user_defined": context.user_defined if context.user_defined else {},
+        "model_id": effective_model_id,
+        "context_percentage": context_percentage,
         "created_at": context.created_at,
         "updated_at": context.updated_at
     })
     return filtered_context
+
+
+def _get_last_total_tokens(messages: list[dict]) -> int:
+    """Walk messages in reverse to find the last AI message with usage_metadata.total_tokens."""
+    for msg in reversed(messages):
+        if msg.get("type") == "ai":
+            usage = msg.get("usage_metadata")
+            if usage and isinstance(usage, dict):
+                total = usage.get("total_tokens", 0)
+                if total:
+                    return total
+    return 0
 
 def transform_to_history_context(context: Context, agent: Agent.Agent) -> HistoryContext:
     return HistoryContext(**{

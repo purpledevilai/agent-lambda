@@ -5,8 +5,9 @@ from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Agent, User, Context, Chat, Tool
 from Models.TokenTracking import build_tracking_callback
+from Models.LLMModel import is_anthropic_model, get_model_or_none
 from LLM.AgentChat import AgentChat
-from LLM.CreateLLM import create_llm
+from LLM.CreateLLM import create_llm, DEFAULT_MODEL
 from LLM.BaseMessagesConverter import dict_messages_to_base_messages, base_messages_to_dict_messages
 from LLM.TerminatingConfig import TerminatingConfig
 
@@ -54,7 +55,10 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
     # Otherwise, if prompt is provided, append it to the agent's prompt
     if not body.prompt:
         raise ValueError("Either 'message' or 'prompt' must be provided in the request body.")
-    
+
+    if context.model_id and is_anthropic_model(context.model_id):
+        raise Exception("Anthropic models do not support adding system messages mid-conversation", 400)
+
     # Track the message count before adding the system message
     messages_before_system = len(context.messages)
     
@@ -80,14 +84,14 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
 
     # Create the agent chat
     agent_chat = AgentChat(
-        llm=create_llm(),
+        llm=create_llm(context.model_id),
         prompt=agent.prompt,
         messages=dict_messages_to_base_messages(context.messages),
         tools=tools,
         context=context_dict,
         prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
         terminating_config=body.terminating_config,
-        on_response=build_tracking_callback(agent.org_id),
+        on_response=build_tracking_callback(agent.org_id, context.model_id),
     )
 
     # Invoke the agent (no human message added)
@@ -143,11 +147,21 @@ def add_ai_message_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser
         context.messages = all_dict_messages[:system_message_index]
         Context.save_context(context)
 
+    # Calculate context percentage
+    effective_model_id = context.model_id or DEFAULT_MODEL
+    context_percentage = None
+    llm_model = get_model_or_none(effective_model_id)
+    if llm_model and llm_model.context_window_size:
+        context_size = agent_chat.get_context_size()
+        context_percentage = round((context_size / llm_model.context_window_size) * 100, 2)
+
     # Initialize the response
     response = Chat.ChatResponse(
         response=agent_response,
         saved_ai_messages=body.save_ai_messages,
-        generated_messages=generated_messages_dicts
+        generated_messages=generated_messages_dicts,
+        model_id=effective_model_id,
+        context_percentage=context_percentage,
     )
 
     # check if there are chat events

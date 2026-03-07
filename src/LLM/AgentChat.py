@@ -5,6 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, BaseMessage, ToolMessage, AIMessage, SystemMessage
 from LLM.AgentTool import AgentTool
 from LLM.TerminatingConfig import TerminatingConfig
+from LLM.ContentNormalizer import normalize_content
 from Models import DataWindow, JSONDocument
 from Tools.MemoryTools.helper_retrive_and_cache_doc import retrieve_and_cache_doc
 from AWS.APIGateway import default_type_error_handler
@@ -67,10 +68,25 @@ class AgentChat:
       self._refresh_data_windows()
     
     response = self.prompt_chain.invoke({"messages": self.messages})
-    self.messages.append(response)
 
     if self.on_response:
       self.on_response(response)
+
+    text_content = normalize_content(response.content)
+
+    if response.tool_calls and text_content:
+      # Mixed response (e.g. Anthropic sends text + tool calls together).
+      # Split into a text message and a tool-call-only message.
+      self.messages.append(AIMessage(content=text_content, response_metadata=response.response_metadata, id=response.id))
+      self.messages.append(AIMessage(content='', tool_calls=response.tool_calls, usage_metadata=response.usage_metadata, response_metadata=response.response_metadata))
+    else:
+      self.messages.append(AIMessage(
+        content=text_content or '',
+        tool_calls=response.tool_calls,
+        usage_metadata=response.usage_metadata,
+        response_metadata=response.response_metadata,
+        id=response.id,
+      ))
     
     if len(response.tool_calls) > 0:
       # Reset consecutive nudge count since agent is calling tools
@@ -134,7 +150,7 @@ class AgentChat:
       self.messages.append(nudge_message)
       return self.invoke(load_data_windows=True)
     
-    return response.content
+    return normalize_content(response.content)
   
   def _refresh_data_windows(self):
     """
@@ -200,6 +216,17 @@ class AgentChat:
         self.messages[msg_index].content = json.dumps(value, default=default_type_error_handler, indent=2)
       except Exception as e:
         self.messages[msg_index].content = f"Error refreshing MemoryWindow: {e}"
+
+  def get_context_size(self) -> int:
+    """Returns the total token count from the last AIMessage that has usage_metadata."""
+    for message in reversed(self.messages):
+      if isinstance(message, AIMessage):
+        usage = getattr(message, 'usage_metadata', None)
+        if usage:
+          total = usage.get('total_tokens', 0) if isinstance(usage, dict) else getattr(usage, 'total_tokens', 0)
+          if total:
+            return total
+    return 0
 
   def add_human_message_and_invoke(self, message: str):
     self.messages.append(HumanMessage(content=message))
