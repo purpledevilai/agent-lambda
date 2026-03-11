@@ -1,8 +1,7 @@
 import os
 import time
 import logging
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from collections import defaultdict
 from pydantic import BaseModel
@@ -16,6 +15,8 @@ from Models.LLMModel import get_model_or_none
 logger = logging.getLogger(__name__)
 
 DAILY_USAGE_TABLE_NAME = os.environ["DAILY_USAGE_TABLE_NAME"]
+
+UTC = timezone.utc
 
 
 class DailyUsage(BaseModel):
@@ -40,20 +41,14 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
     params = lambda_event.queryStringParameters or {}
     start_date_str = params.get("start_date")
     end_date_str = params.get("end_date")
-    timezone_str = params.get("timezone", "UTC")
 
-    logger.info(f"[usage] start_date={start_date_str} end_date={end_date_str} tz={timezone_str} user={user.sub}")
+    logger.info(f"[usage] start_date={start_date_str} end_date={end_date_str} user={user.sub}")
 
     if not start_date_str or not end_date_str:
         raise Exception("start_date and end_date query parameters are required", 400)
 
-    try:
-        tz = ZoneInfo(timezone_str)
-    except Exception:
-        raise Exception(f"Invalid timezone: {timezone_str}", 400)
-
-    start_dt = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=tz)
-    end_dt = datetime.strptime(end_date_str, "%Y-%m-%d").replace(tzinfo=tz) + timedelta(days=1)
+    start_dt = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=UTC)
+    end_dt = datetime.strptime(end_date_str, "%Y-%m-%d").replace(tzinfo=UTC) + timedelta(days=1)
 
     # Get the user's org
     t1 = time.time()
@@ -73,7 +68,7 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
 
     logger.info(f"[usage] org_id={org_id}")
 
-    today_utc = datetime.utcnow().strftime("%Y-%m-%d")
+    today_utc = datetime.now(UTC).strftime("%Y-%m-%d")
 
     # ── 1. Query daily_usage for aggregated past days ──
     t2 = time.time()
@@ -103,17 +98,15 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
 
     # ── 2. Query today's raw token_tracking records (small, fast) ──
     if start_date_str <= today_utc <= end_date_str:
-        today_start = datetime.strptime(today_utc, "%Y-%m-%d").replace(tzinfo=ZoneInfo("UTC"))
-        today_start_ts = int(today_start.timestamp())
-        today_end_ts = int((today_start + timedelta(days=1)).timestamp())
+        today_start_ts = int(datetime.strptime(today_utc, "%Y-%m-%d").replace(tzinfo=UTC).timestamp())
+        today_end_ts = today_start_ts + 86400
 
         t3 = time.time()
         today_trackings = get_token_trackings_for_org(org_id, today_start_ts, today_end_ts)
         logger.info(f"[usage] today's token_tracking query took {time.time() - t3:.2f}s, returned {len(today_trackings)} records")
 
         for t_rec in today_trackings:
-            day_str = datetime.fromtimestamp(t_rec.created_at, tz=tz).strftime("%Y-%m-%d")
-            daily_tokens[day_str] += t_rec.input_tokens + t_rec.output_tokens
+            daily_tokens[today_utc] += t_rec.input_tokens + t_rec.output_tokens
             model_totals[t_rec.model]["input_tokens"] += t_rec.input_tokens
             model_totals[t_rec.model]["output_tokens"] += t_rec.output_tokens
 
