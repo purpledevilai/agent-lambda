@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 from datetime import datetime, timedelta
@@ -7,11 +8,14 @@ from collections import defaultdict
 from pydantic import BaseModel
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
+from AWS.DynamoDB import query_by_pk_and_sk_range
 from Models.User import get_user
 from Models.TokenTracking import get_token_trackings_for_org
 from Models.LLMModel import get_model_or_none
 
 logger = logging.getLogger(__name__)
+
+DAILY_USAGE_TABLE_NAME = os.environ["DAILY_USAGE_TABLE_NAME"]
 
 
 class DailyUsage(BaseModel):
@@ -48,12 +52,8 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
     except Exception:
         raise Exception(f"Invalid timezone: {timezone_str}", 400)
 
-    # Parse date strings (YYYY-MM-DD) into timezone-aware start/end timestamps
     start_dt = datetime.strptime(start_date_str, "%Y-%m-%d").replace(tzinfo=tz)
     end_dt = datetime.strptime(end_date_str, "%Y-%m-%d").replace(tzinfo=tz) + timedelta(days=1)
-
-    start_ts = int(start_dt.timestamp())
-    end_ts = int(end_dt.timestamp())
 
     # Get the user's org
     t1 = time.time()
@@ -71,20 +71,53 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
     else:
         org_id = db_user.organizations[0]
 
-    logger.info(f"[usage] org_id={org_id} range={start_ts}-{end_ts}")
+    logger.info(f"[usage] org_id={org_id}")
 
-    # Query token trackings for the org in the time range
+    today_utc = datetime.utcnow().strftime("%Y-%m-%d")
+
+    # ── 1. Query daily_usage for aggregated past days ──
     t2 = time.time()
-    trackings = get_token_trackings_for_org(org_id, start_ts, end_ts)
-    logger.info(f"[usage] get_token_trackings_for_org took {time.time() - t2:.2f}s, returned {len(trackings)} records")
+    agg_items = query_by_pk_and_sk_range(
+        table_name=DAILY_USAGE_TABLE_NAME,
+        partition_key="org_id",
+        partition_value=org_id,
+        sort_key="date",
+        sort_min=start_date_str,
+        sort_max=end_date_str,
+    )
+    logger.info(f"[usage] daily_usage query took {time.time() - t2:.2f}s, returned {len(agg_items)} days")
 
-    # Group by day (in the requested timezone) for bar chart
-    daily_tokens = defaultdict(int)
-    for t in trackings:
-        day_str = datetime.fromtimestamp(t.created_at, tz=tz).strftime("%Y-%m-%d")
-        daily_tokens[day_str] += t.input_tokens + t.output_tokens
+    daily_tokens: dict[str, int] = defaultdict(int)
+    model_totals: dict[str, dict] = defaultdict(lambda: {"input_tokens": 0, "output_tokens": 0})
 
-    # Build sorted daily usage list (fill gaps so every day in range is present)
+    for item in agg_items:
+        date_str = item["date"]
+        daily_tokens[date_str] += int(item.get("total_input_tokens", 0)) + int(item.get("total_output_tokens", 0))
+
+        models_map = item.get("models", {})
+        for model_name, model_data in models_map.items():
+            inp = int(model_data.get("input_tokens", 0))
+            out = int(model_data.get("output_tokens", 0))
+            model_totals[model_name]["input_tokens"] += inp
+            model_totals[model_name]["output_tokens"] += out
+
+    # ── 2. Query today's raw token_tracking records (small, fast) ──
+    if start_date_str <= today_utc <= end_date_str:
+        today_start = datetime.strptime(today_utc, "%Y-%m-%d").replace(tzinfo=ZoneInfo("UTC"))
+        today_start_ts = int(today_start.timestamp())
+        today_end_ts = int((today_start + timedelta(days=1)).timestamp())
+
+        t3 = time.time()
+        today_trackings = get_token_trackings_for_org(org_id, today_start_ts, today_end_ts)
+        logger.info(f"[usage] today's token_tracking query took {time.time() - t3:.2f}s, returned {len(today_trackings)} records")
+
+        for t_rec in today_trackings:
+            day_str = datetime.fromtimestamp(t_rec.created_at, tz=tz).strftime("%Y-%m-%d")
+            daily_tokens[day_str] += t_rec.input_tokens + t_rec.output_tokens
+            model_totals[t_rec.model]["input_tokens"] += t_rec.input_tokens
+            model_totals[t_rec.model]["output_tokens"] += t_rec.output_tokens
+
+    # ── 3. Build sorted daily usage list (fill gaps) ──
     daily_usage = []
     current_day = start_dt
     while current_day < end_dt:
@@ -92,14 +125,8 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
         daily_usage.append(DailyUsage(date=day_str, total_tokens=daily_tokens.get(day_str, 0)))
         current_day += timedelta(days=1)
 
-    # Group by model for cost calculation
-    model_totals: dict[str, dict] = defaultdict(lambda: {"input_tokens": 0, "output_tokens": 0})
-    for t in trackings:
-        model_totals[t.model]["input_tokens"] += t.input_tokens
-        model_totals[t.model]["output_tokens"] += t.output_tokens
-
-    # Calculate costs per model
-    t3 = time.time()
+    # ── 4. Calculate costs per model ──
+    t4 = time.time()
     model_costs = []
     total_cost = 0.0
     for model_name, totals in model_totals.items():
@@ -118,7 +145,7 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
             cost=f"${cost:,.2f} USD",
         ))
         total_cost += cost
-    logger.info(f"[usage] cost calculation took {time.time() - t3:.2f}s for {len(model_totals)} models")
+    logger.info(f"[usage] cost calculation took {time.time() - t4:.2f}s for {len(model_totals)} models")
 
     logger.info(f"[usage] total handler time {time.time() - t0:.2f}s")
 
