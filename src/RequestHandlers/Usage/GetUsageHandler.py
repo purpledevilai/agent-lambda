@@ -1,3 +1,5 @@
+import time
+import logging
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from typing import Optional
@@ -8,6 +10,8 @@ from AWS.Cognito import CognitoUser
 from Models.User import get_user
 from Models.TokenTracking import get_token_trackings_for_org
 from Models.LLMModel import get_model_or_none
+
+logger = logging.getLogger(__name__)
 
 
 class DailyUsage(BaseModel):
@@ -27,11 +31,14 @@ class UsageResponse(BaseModel):
 
 
 def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> UsageResponse:
+    t0 = time.time()
 
     params = lambda_event.queryStringParameters or {}
     start_date_str = params.get("start_date")
     end_date_str = params.get("end_date")
     timezone_str = params.get("timezone", "UTC")
+
+    logger.info(f"[usage] start_date={start_date_str} end_date={end_date_str} tz={timezone_str} user={user.sub}")
 
     if not start_date_str or not end_date_str:
         raise Exception("start_date and end_date query parameters are required", 400)
@@ -49,7 +56,10 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
     end_ts = int(end_dt.timestamp())
 
     # Get the user's org
+    t1 = time.time()
     db_user = get_user(user.sub)
+    logger.info(f"[usage] get_user took {time.time() - t1:.2f}s")
+
     if not db_user.organizations:
         raise Exception("User does not belong to any organization", 400)
 
@@ -61,8 +71,12 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
     else:
         org_id = db_user.organizations[0]
 
+    logger.info(f"[usage] org_id={org_id} range={start_ts}-{end_ts}")
+
     # Query token trackings for the org in the time range
+    t2 = time.time()
     trackings = get_token_trackings_for_org(org_id, start_ts, end_ts)
+    logger.info(f"[usage] get_token_trackings_for_org took {time.time() - t2:.2f}s, returned {len(trackings)} records")
 
     # Group by day (in the requested timezone) for bar chart
     daily_tokens = defaultdict(int)
@@ -85,6 +99,7 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
         model_totals[t.model]["output_tokens"] += t.output_tokens
 
     # Calculate costs per model
+    t3 = time.time()
     model_costs = []
     total_cost = 0.0
     for model_name, totals in model_totals.items():
@@ -103,6 +118,9 @@ def get_usage_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) ->
             cost=f"${cost:,.2f} USD",
         ))
         total_cost += cost
+    logger.info(f"[usage] cost calculation took {time.time() - t3:.2f}s for {len(model_totals)} models")
+
+    logger.info(f"[usage] total handler time {time.time() - t0:.2f}s")
 
     return UsageResponse(
         daily_usage=daily_usage,
