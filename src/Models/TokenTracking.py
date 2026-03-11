@@ -38,8 +38,9 @@ def get_token_trackings_for_org(org_id: str, start_time: int, end_time: int) -> 
         sort_key="created_at",
         sort_min=start_time,
         sort_max=end_time,
+        projection_expression="model, input_tokens, output_tokens, created_at",
     )
-    return [TokenTracking(**item) for item in items]
+    return [TokenTracking(tracking_id="", org_id=org_id, **item) for item in items]
 
 def create_token_tracking(org_id: str, model: str, input_tokens: int, output_tokens: int) -> TokenTracking:
     data = {
