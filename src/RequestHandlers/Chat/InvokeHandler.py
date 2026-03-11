@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from AWS.Lambda import LambdaEvent
 from AWS.Cognito import CognitoUser
 from Models import Agent, User, Context, Chat, Tool
-from Models.TokenTracking import build_tracking_callback
+from Models.TokenTracking import InvocationTokenTracker
 from Models.LLMModel import get_model_or_none
 from LLM.AgentChat import AgentChat
 from LLM.CreateLLM import create_llm, DEFAULT_MODEL
@@ -54,6 +54,9 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
     # Get tool objects
     tools = [Tool.get_agent_tool_with_id(tool_id) for tool_id in combined_tool_ids] if combined_tool_ids else []
 
+    # Create token tracker for this invocation
+    token_tracker = InvocationTokenTracker(agent.org_id, context.model_id)
+
     # Create the agent chat
     agent_chat = AgentChat(
         create_llm(context.model_id),
@@ -63,7 +66,7 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
         context=context_dict,
         prompt_arg_names=agent.prompt_arg_names if agent.prompt_arg_names else [],
         terminating_config=body.terminating_config,
-        on_response=build_tracking_callback(agent.org_id, context.model_id),
+        on_response=token_tracker.on_response,
     )
 
     # Invoke the agent without adding a human message
@@ -89,13 +92,16 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
         context.messages = all_dict_messages
         Context.save_context(context)
 
-    # Calculate context percentage
+    # Calculate context percentage and invocation cost
     effective_model_id = context.model_id or DEFAULT_MODEL
     context_percentage = None
+    invocation_cost = None
     llm_model = get_model_or_none(effective_model_id)
-    if llm_model and llm_model.context_window_size:
-        context_size = agent_chat.get_context_size()
-        context_percentage = round((context_size / llm_model.context_window_size) * 100, 2)
+    if llm_model:
+        if llm_model.context_window_size:
+            context_size = agent_chat.get_context_size()
+            context_percentage = round((context_size / llm_model.context_window_size) * 100, 2)
+        invocation_cost = token_tracker.calculate_cost(llm_model.input_token_cost, llm_model.output_token_cost)
 
     # Initialize the response
     response = Chat.ChatResponse(
@@ -104,6 +110,7 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
         generated_messages=generated_messages_dicts,
         model_id=effective_model_id,
         context_percentage=context_percentage,
+        invocation_cost=invocation_cost,
     )
 
     # check if there are chat events

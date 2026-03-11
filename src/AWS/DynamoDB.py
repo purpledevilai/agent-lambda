@@ -100,6 +100,7 @@ def get_items_by_index_range(
     sort_key: str,
     sort_min,
     sort_max,
+    projection_expression: str = None,
 ) -> list[dict]:
     """
     Query items from a GSI using a partition key and a sort key range (BETWEEN).
@@ -111,6 +112,7 @@ def get_items_by_index_range(
     :param sort_key: Sort key name for the index
     :param sort_min: Lower bound of the sort key range (inclusive)
     :param sort_max: Upper bound of the sort key range (inclusive)
+    :param projection_expression: Optional comma-separated attributes to fetch
     :return: List of matching items
     """
     table = _get_table(table_name)
@@ -120,6 +122,48 @@ def get_items_by_index_range(
     while True:
         query_params = {
             "IndexName": index_name,
+            "KeyConditionExpression": Key(partition_key).eq(partition_value) & Key(sort_key).between(sort_min, sort_max),
+        }
+        if projection_expression:
+            query_params["ProjectionExpression"] = projection_expression
+        if last_evaluated_key:
+            query_params["ExclusiveStartKey"] = last_evaluated_key
+
+        response = table.query(**query_params)
+        items.extend(response.get("Items", []))
+
+        if "LastEvaluatedKey" in response:
+            last_evaluated_key = response["LastEvaluatedKey"]
+        else:
+            break
+
+    return items
+
+def query_by_pk_and_sk_range(
+    table_name: str,
+    partition_key: str,
+    partition_value: str,
+    sort_key: str,
+    sort_min,
+    sort_max,
+) -> list[dict]:
+    """
+    Query items from a table's primary key (partition + sort key range).
+
+    :param table_name: Name of the DynamoDB table
+    :param partition_key: Partition key attribute name
+    :param partition_value: Partition key value to match
+    :param sort_key: Sort key attribute name
+    :param sort_min: Lower bound of the sort key range (inclusive)
+    :param sort_max: Upper bound of the sort key range (inclusive)
+    :return: List of matching items
+    """
+    table = _get_table(table_name)
+    items = []
+    last_evaluated_key = None
+
+    while True:
+        query_params = {
             "KeyConditionExpression": Key(partition_key).eq(partition_value) & Key(sort_key).between(sort_min, sort_max),
         }
         if last_evaluated_key:
@@ -134,6 +178,7 @@ def get_items_by_index_range(
             break
 
     return items
+
 
 def get_latest_items_by_index(
     table_name: str,

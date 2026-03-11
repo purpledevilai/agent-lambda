@@ -33,4 +33,5 @@ class ChatResponse(BaseModel):
     generated_messages: List[MessageType]
     model_id: Optional[str] = None
     context_percentage: Optional[float] = None
+    invocation_cost: Optional[float] = None
     events: Optional[list[dict]] = None
