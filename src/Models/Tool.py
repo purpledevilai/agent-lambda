@@ -26,6 +26,7 @@ class Tool(BaseModel):
     code: Optional[str] = None
     pass_context: bool = False
     is_async: bool = False
+    is_client_side_tool: bool = False
     created_at: int
     updated_at: int
 
@@ -35,9 +36,10 @@ class CreateToolParams(BaseModel):
     name: str
     description: str
     pd_id: Optional[str] = None
-    code: str
+    code: Optional[str] = None
     pass_context: bool = False
     is_async: bool = False
+    is_client_side_tool: bool = False
 
 
 class UpdateToolParams(BaseModel):
@@ -47,6 +49,7 @@ class UpdateToolParams(BaseModel):
     code: Optional[str] = None
     pass_context: Optional[bool] = None
     is_async: Optional[bool] = None
+    is_client_side_tool: Optional[bool] = None
 
 
 def tool_exists(tool_id: str) -> bool:
@@ -57,10 +60,11 @@ def create_tool(
     org_id: str,
     name: str,
     description: str,
-    code: str,
+    code: Optional[str] = None,
     pd_id: Optional[str] = None,  # Parameter Definition ID
     pass_context: bool = False,
-    is_async: bool = False
+    is_async: bool = False,
+    is_client_side_tool: bool = False
 ) -> Tool:
     tool_id = str(uuid.uuid4())
     created_at = int(datetime.now().timestamp())
@@ -74,6 +78,7 @@ def create_tool(
         code=code,
         pass_context=pass_context,
         is_async=is_async,
+        is_client_side_tool=is_client_side_tool,
         created_at=created_at,
         updated_at=updated_at
     )
@@ -112,6 +117,16 @@ def get_agent_tool_with_id(tool_id: str) -> AgentTool:
         parameter_definition.parameters if parameter_definition else [],
         docstring=tool.description
     )
+
+    if tool.is_client_side_tool:
+        def client_side_noop(**kwargs):
+            return ""
+        return AgentTool(
+            tool_id=tool_id,
+            params=params,
+            function=client_side_noop,
+            is_client_side_tool=True
+        )
 
     def custom_code_lambda_invoke(**kwargs):
         response = invoke_lambda(

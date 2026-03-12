@@ -27,7 +27,8 @@ def create_tool_handler(lambda_event: LambdaEvent, user: CognitoUser) -> Tool.To
         pd_id=body.pd_id,
         code=body.code,
         pass_context=body.pass_context,
-        is_async=body.is_async
+        is_async=body.is_async,
+        is_client_side_tool=body.is_client_side_tool
     )
 
     return tool
