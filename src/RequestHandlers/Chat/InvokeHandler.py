@@ -113,6 +113,12 @@ def invoke_handler(lambda_event: LambdaEvent, user: Optional[CognitoUser]) -> Ch
         invocation_cost=invocation_cost,
     )
 
+    # Check for pending client-side tool calls
+    if agent_chat.pending_client_side_tool_calls:
+        response.client_side_tool_calls = [
+            Chat.ClientSideToolCall(**tc) for tc in agent_chat.pending_client_side_tool_calls
+        ]
+
     # check if there are chat events
     if context_dict.get("events"):
         response.events = context_dict["events"]

@@ -39,6 +39,7 @@ from RequestHandlers.Agent.DeleteAgentHandler import delete_agent_handler
 from RequestHandlers.Chat.ChatHandler import chat_handler
 from RequestHandlers.Chat.AddAIMessageHandler import add_ai_message_handler
 from RequestHandlers.Chat.InvokeHandler import invoke_handler
+from RequestHandlers.Chat.ClientSideToolResponsesHandler import client_side_tool_responses_handler
 
 # Chatpage
 from RequestHandlers.ChatPage.CreateChatPageHandler import create_chat_page_handler
@@ -242,6 +243,12 @@ handler_registry = {
     "/chat/invoke": {
         "POST": {
             "handler": invoke_handler,
+            "public": True
+        }
+    },
+    "/chat/client-side-tool-responses": {
+        "POST": {
+            "handler": client_side_tool_responses_handler,
             "public": True
         }
     },

@@ -27,6 +27,19 @@ class ToolResponseMessage(BaseModel):
 
 MessageType = Union[FilteredMessage, ToolCallMessage, ToolResponseMessage]
 
+class ClientSideToolCall(BaseModel):
+    tool_call_id: str
+    tool_name: str
+    tool_input: dict
+
+class ClientSideToolResponseItem(BaseModel):
+    tool_call_id: str
+    response: str
+
+class ClientSideToolResponsesInput(BaseModel):
+    context_id: str
+    tool_responses: List[ClientSideToolResponseItem]
+
 class ChatResponse(BaseModel):
     response: str
     saved_ai_messages: bool
@@ -35,3 +48,4 @@ class ChatResponse(BaseModel):
     context_percentage: Optional[float] = None
     invocation_cost: Optional[float] = None
     events: Optional[list[dict]] = None
+    client_side_tool_calls: Optional[List[ClientSideToolCall]] = None

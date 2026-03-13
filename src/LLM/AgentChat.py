@@ -28,6 +28,7 @@ class AgentChat:
     self.on_response = on_response
     self._invocation_count = 0
     self._consecutive_nudge_count = 0
+    self.pending_client_side_tool_calls = None
     
     # Replace prompt arguments using explicit prompt_arg_names
     # Simple string find-and-replace - arg names can be any format (e.g., ARG_USER_NAME or {user_name})
@@ -93,10 +94,19 @@ class AgentChat:
       if self.terminating_config:
         self._consecutive_nudge_count = 0
       
-      # Track called tools for terminating config cleanup
-      called_tool_calls = []
-      
+      # Separate server-side and client-side tool calls
+      client_side_tool_calls = []
+      server_side_tool_calls = []
       for tool_call in response.tool_calls:
+        tool = self.name_to_tool.get(tool_call["name"])
+        if tool and tool.is_client_side_tool:
+          client_side_tool_calls.append(tool_call)
+        else:
+          server_side_tool_calls.append(tool_call)
+      
+      # Process server-side tools first
+      called_tool_calls = []
+      for tool_call in server_side_tool_calls:
         try:
           tool = self.name_to_tool[tool_call["name"]]
           
@@ -133,6 +143,18 @@ class AgentChat:
             response.tool_calls = called_tool_calls
             # Return the terminating tool's response
             return tool_response
+      
+      # If there are client-side tool calls, store them and return
+      if client_side_tool_calls:
+        self.pending_client_side_tool_calls = [
+          {
+            "tool_call_id": tc["id"],
+            "tool_name": tc["name"],
+            "tool_input": tc["args"],
+          }
+          for tc in client_side_tool_calls
+        ]
+        return ""
       
       # Recursively invoke after processing tool calls
       return self.invoke(load_data_windows=True)

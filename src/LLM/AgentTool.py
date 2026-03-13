@@ -8,4 +8,5 @@ class AgentTool(BaseModel):
     params: Type[BaseModel]
     pass_context: bool = False
     is_async: bool = False
+    is_client_side_tool: bool = False
 
